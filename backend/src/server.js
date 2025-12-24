@@ -2,11 +2,18 @@ import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
 
-// ✅ LOAD ENV FIRST - BEFORE ANY OTHER IMPORTS
+// ==================================================
+// LOAD ENV (WORKS FOR LOCAL + RENDER BOTH)
+// ==================================================
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
+// 🔥 Render automatically injects env, local needs .env
+dotenv.config({
+    path: path.resolve(__dirname, "../.env"),
+});
+
+// ==================================================
 import express from "express";
 import cors from "cors";
 import connectDB from "./config/database.js";
@@ -22,17 +29,40 @@ import bookingRoutes from "./routes/bookingRoutes.js";
 
 const app = express();
 
-// CORS
-app.use(cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
-    credentials: true,
-}));
+// ==================================================
+// CORS (FIXED FOR VERCEL + LOCAL)
+// ==================================================
+app.use(
+    cors({
+        origin: [
+            process.env.CLIENT_URL,          // Vercel frontend
+            "http://localhost:5173",          // Local frontend
+        ].filter(Boolean),
+        credentials: true,
+    })
+);
 
-// Body Parser
+// ==================================================
+// BODY PARSERS
+// ==================================================
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// API Routes
+// ==================================================
+// HEALTH CHECK (🔥 THIS WAS THE MAIN ISSUE)
+// ==================================================
+app.get("/api/health", (req, res) => {
+    res.status(200).json({
+        success: true,
+        message: "EaseHub API is running",
+        environment: process.env.NODE_ENV || "development",
+        timestamp: new Date().toISOString(),
+    });
+});
+
+// ==================================================
+// API ROUTES
+// ==================================================
 app.use("/api/auth", authRoutes);
 app.use("/api/pgs", pgRoutes);
 app.use("/api/meals", mealRoutes);
@@ -41,33 +71,30 @@ app.use("/api/requests", requestRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/bookings", bookingRoutes);
 
-// Health Check
-app.get("/api/health", (req, res) => {
-    res.json({
-        success: true,
-        message: "EaseHub API is running",
-        env: process.env.NODE_ENV,
-        timestamp: new Date().toISOString()
-    });
-});
-
-// 404 Handler
+// ==================================================
+// 404 HANDLER (KEEP AT BOTTOM)
+// ==================================================
 app.use((req, res) => {
     res.status(404).json({
         success: false,
-        message: "Route not found"
+        message: `Route not found: ${req.originalUrl}`,
     });
 });
 
-// Error Handler
+// ==================================================
+// GLOBAL ERROR HANDLER
+// ==================================================
 app.use((err, req, res, next) => {
-    console.error('Server Error:', err);
+    console.error("❌ Server Error:", err);
     res.status(500).json({
         success: false,
-        message: err.message || "Internal Server Error"
+        message: err.message || "Internal Server Error",
     });
 });
 
+// ==================================================
+// START SERVER
+// ==================================================
 const PORT = process.env.PORT || 5002;
 
 const startServer = async () => {
@@ -75,13 +102,17 @@ const startServer = async () => {
         await connectDB();
 
         app.listen(PORT, () => {
+            console.log("=================================");
             console.log(`🚀 Server running on port ${PORT}`);
-            console.log(`📧 EMAIL_USER: ${process.env.EMAIL_USER || 'NOT LOADED'}`);
-            console.log(`🔐 EMAIL_APP_PASSWORD: ${process.env.EMAIL_APP_PASSWORD ? 'LOADED' : 'NOT LOADED'}`);
-            console.log(`🌐 CLIENT_URL: ${process.env.CLIENT_URL || 'NOT LOADED'}`);
+            console.log(`🌍 ENV: ${process.env.NODE_ENV || "development"}`);
+            console.log(`🌐 CLIENT_URL: ${process.env.CLIENT_URL || "NOT SET"}`);
+            console.log(
+                `📧 EMAIL_USER: ${process.env.EMAIL_USER ? "LOADED" : "NOT LOADED"}`
+            );
+            console.log("=================================");
         });
     } catch (error) {
-        console.error('Failed to start server:', error);
+        console.error("❌ Failed to start server:", error);
         process.exit(1);
     }
 };
