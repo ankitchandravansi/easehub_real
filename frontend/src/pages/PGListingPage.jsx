@@ -140,7 +140,7 @@ const PGListingPage = () => {
                 <LoadingSpinner size="lg" />
                 <p className="mt-4 text-gray-600 dark:text-gray-300 text-center">Loading PGs...</p>
                 <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 text-center">
-                    If this takes more than 10 seconds, the server might be waking up.
+                    Server waking up… this may take up to 30 seconds on first load.
                 </p>
             </div>
         );
