@@ -8,6 +8,7 @@ const PGListingPage = () => {
     const [pgListings, setPgListings] = useState([]);
     const [filteredListings, setFilteredListings] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [filters, setFilters] = useState({
         gender: '',
@@ -24,16 +25,23 @@ const PGListingPage = () => {
 
     // Fetch Data - Runs ONCE on mount
     useEffect(() => {
-        const fetchPGListings = async () => {
+        let isMounted = true;
+
+        const fetchPGListings = async (retryCount = 0) => {
             try {
+                console.log(`[PG Fetch] Attempt ${retryCount + 1}/2`);
                 setLoading(true);
+                setError(null);
+
                 const response = await getAllPGs();
+
+                if (!isMounted) return;
 
                 // Robust data extraction
                 let dataToUse = [];
                 if (response.data && Array.isArray(response.data.data)) {
                     dataToUse = response.data.data;
-                } else if (response.data && Array.isArray(response.data.pgs)) { // Handle possible response structure
+                } else if (response.data && Array.isArray(response.data.pgs)) {
                     dataToUse = response.data.pgs;
                 } else if (Array.isArray(response.data)) {
                     dataToUse = response.data;
@@ -41,18 +49,48 @@ const PGListingPage = () => {
 
                 setPgListings(dataToUse);
                 setFilteredListings(dataToUse);
-                console.log(`Loaded ${dataToUse.length} PGs`);
+                console.log(`[PG Fetch] Success: Loaded ${dataToUse.length} PGs`);
 
             } catch (err) {
-                console.error("Failed to load PGs:", err);
+                console.error(`[PG Fetch] Error on attempt ${retryCount + 1}:`, err);
+
+                if (!isMounted) return;
+
+                // Retry once if it's a timeout or network error and we haven't retried yet
+                if (retryCount === 0 && (err.code === 'ECONNABORTED' || err.message?.includes('timeout') || err.message?.includes('Network Error'))) {
+                    console.log('[PG Fetch] Retrying after 2 seconds...');
+                    setTimeout(() => {
+                        if (isMounted) {
+                            fetchPGListings(1);
+                        }
+                    }, 2000);
+                    return;
+                }
+
+                // Final error state
                 setPgListings([]);
                 setFilteredListings([]);
-            } finally {
+
+                // Check if it's a timeout error
+                if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
+                    setError('timeout');
+                } else {
+                    setError('general');
+                }
                 setLoading(false);
+            } finally {
+                if (isMounted && retryCount > 0) {
+                    // Only set loading false on final attempt
+                    setLoading(false);
+                }
             }
         };
 
         fetchPGListings();
+
+        return () => {
+            isMounted = false;
+        };
     }, []);
 
     // Filter Logic - Runs when filters change
@@ -98,9 +136,36 @@ const PGListingPage = () => {
     // --- RENDER ---
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+            <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
                 <LoadingSpinner size="lg" />
-                <p className="ml-4 text-gray-600 dark:text-gray-300">Loading PGs...</p>
+                <p className="mt-4 text-gray-600 dark:text-gray-300 text-center">Loading PGs...</p>
+                <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 text-center">
+                    If this takes more than 10 seconds, the server might be waking up.
+                </p>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
+                <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 text-center">
+                    <div className="text-6xl mb-4">⏰</div>
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+                        {error === 'timeout' ? 'Server is Waking Up' : 'Connection Issue'}
+                    </h2>
+                    <p className="text-gray-600 dark:text-gray-400 mb-6">
+                        {error === 'timeout'
+                            ? 'Our server is starting up (free tier cold start). This usually takes 10-20 seconds. Please refresh the page in a moment.'
+                            : 'Unable to connect to the server. Please check your internet connection and try again.'}
+                    </p>
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-md hover:shadow-lg"
+                    >
+                        Refresh Page
+                    </button>
+                </div>
             </div>
         );
     }

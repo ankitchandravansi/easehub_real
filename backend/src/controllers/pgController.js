@@ -5,13 +5,19 @@ import PGHostel from "../models/PGHostel.js";
 // @access  Public
 export const getAllPGs = async (req, res) => {
     try {
+        console.log('[PG API] Fetching all PGs from database...');
         const pgs = await PGHostel.find().sort("-createdAt");
+        console.log(`[PG API] Found ${pgs.length} PGs in database`);
+
         res.status(200).json({
             success: true,
             count: pgs.length,
             data: pgs,
         });
+
+        console.log(`[PG API] Response sent: ${pgs.length} PGs`);
     } catch (error) {
+        console.error('[PG API] Error fetching PGs:', error.message);
         res.status(500).json({
             success: false,
             message: error.message,
