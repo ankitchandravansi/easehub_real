@@ -45,8 +45,9 @@ app.use("/api/bookings", bookingRoutes);
 app.get("/api/health", (req, res) => {
     res.json({
         success: true,
-        message: "EaseHub API running",
-        env: process.env.NODE_ENV
+        message: "EaseHub API is running",
+        env: process.env.NODE_ENV,
+        timestamp: new Date().toISOString()
     });
 });
 
