@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getPGById } from '../services/pgService';
+import { getPGById } from '../services/services';
 import { createBooking, verifyPayment } from '../services/bookingService';
 import { useAuth } from '../context/AuthContext';
 
@@ -271,8 +271,8 @@ const BookingPage = () => {
                                     type="submit"
                                     disabled={submitting || total <= 0}
                                     className={`w-full py-3 rounded-lg font-semibold text-white transition ${submitting || total <= 0
-                                            ? 'bg-gray-400 cursor-not-allowed'
-                                            : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700'
+                                        ? 'bg-gray-400 cursor-not-allowed'
+                                        : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700'
                                         }`}
                                 >
                                     {submitting ? 'Processing...' : `Pay ₹${total}`}
