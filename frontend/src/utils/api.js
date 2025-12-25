@@ -7,6 +7,7 @@ const API_URL = `${API_BASE_URL}/api`;
 const api = axios.create({
     baseURL: API_URL,
     timeout: 30000, // 30 seconds for Render cold starts
+    withCredentials: true, // CRITICAL: Required for CORS with credentials
     headers: {
         'Content-Type': 'application/json'
     }
