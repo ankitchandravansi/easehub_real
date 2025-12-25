@@ -64,6 +64,19 @@ app.get("/api/health", (req, res) => {
 });
 
 // ==================================================
+// DEPLOYMENT INFO (FOR DEBUGGING)
+// ==================================================
+app.get("/api/deploy-info", (req, res) => {
+    res.status(200).json({
+        success: true,
+        deployedAt: "2025-12-25T12:50:00+05:30",
+        version: "1.0.1-fix",
+        startScript: "node src/server.js",
+        routesRegistered: ["/api/auth", "/api/pgs", "/api/meals", "/api/laundry", "/api/requests", "/api/admin", "/api/bookings"]
+    });
+});
+
+// ==================================================
 // API ROUTES
 // ==================================================
 app.use("/api/auth", authRoutes);
