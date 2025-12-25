@@ -2,11 +2,11 @@
   "name": "easehub-backend",
   "version": "1.0.0",
   "description": "EaseHub Backend API - College student services management platform",
-  "main": "src/server.js",
   "type": "module",
+  "main": "server.js",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "node --watch src/server.js",
+    "start": "node server.js",
+    "dev": "node --watch server.js",
     "seed": "node seedPGs.js"
   },
   "keywords": [
