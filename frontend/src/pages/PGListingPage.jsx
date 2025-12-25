@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getAllPGs } from "../services/services";
+import { fetchPGsWithRetry, clearPGCache } from '../utils/pgFetch';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 const PGListingPage = () => {
-    // Initial state setup
     const [pgListings, setPgListings] = useState([]);
     const [filteredListings, setFilteredListings] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [retrying, setRetrying] = useState(false);
     const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [filters, setFilters] = useState({
@@ -23,72 +23,41 @@ const PGListingPage = () => {
         return "/no-image.jpg";
     };
 
-    // Fetch Data - Runs ONCE on mount
+    // Fetch PG listings with retry and caching
     useEffect(() => {
         let isMounted = true;
 
-        const fetchPGListings = async (retryCount = 0) => {
+        const loadPGListings = async () => {
             try {
-                console.log(`[PG Fetch] Attempt ${retryCount + 1}/2`);
                 setLoading(true);
                 setError(null);
+                setRetrying(false);
 
-                const response = await getAllPGs();
+                const data = await fetchPGsWithRetry(3, 2000);
 
                 if (!isMounted) return;
 
-                // Robust data extraction
-                let dataToUse = [];
-                if (response.data && Array.isArray(response.data.data)) {
-                    dataToUse = response.data.data;
-                } else if (response.data && Array.isArray(response.data.pgs)) {
-                    dataToUse = response.data.pgs;
-                } else if (Array.isArray(response.data)) {
-                    dataToUse = response.data;
-                }
-
-                setPgListings(dataToUse);
-                setFilteredListings(dataToUse);
-                console.log(`[PG Fetch] Success: Loaded ${dataToUse.length} PGs`);
-
+                setPgListings(data);
+                setFilteredListings(data);
+                setLoading(false);
             } catch (err) {
-                console.error(`[PG Fetch] Error on attempt ${retryCount + 1}:`, {
-                    message: err.message,
-                    response: err.response?.data,
-                    status: err.response?.status,
-                    code: err.code
-                });
-
                 if (!isMounted) return;
 
-                // Retry once if it's a timeout or network error and we haven't retried yet
-                if (retryCount === 0 && (err.code === 'ECONNABORTED' || err.message?.includes('timeout') || err.message?.includes('Network Error'))) {
-                    console.log('[PG Fetch] Retrying after 2 seconds...');
-                    setTimeout(() => {
-                        if (isMounted) {
-                            fetchPGListings(1);
-                        }
-                    }, 2000);
-                    return;
-                }
+                console.error('[PG Listing] Failed to load PGs:', err);
 
-                // Final error state
-                setPgListings([]);
-                setFilteredListings([]);
-
-                // Set specific error messages
+                // Determine error type
                 let errorType = 'general';
                 let errorMessage = 'Unable to load PG listings';
 
                 if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
                     errorType = 'timeout';
-                    errorMessage = 'Server is starting up (cold start)';
+                    errorMessage = 'Server is starting up';
                 } else if (err.response?.status === 404) {
                     errorType = '404';
-                    errorMessage = 'API endpoint not found - Backend may need redeployment';
+                    errorMessage = 'API endpoint not found';
                 } else if (err.response?.status >= 500) {
                     errorType = 'server';
-                    errorMessage = err.response?.data?.message || 'Server error occurred';
+                    errorMessage = 'Server error occurred';
                 } else if (err.message?.includes('Network Error')) {
                     errorType = 'network';
                     errorMessage = 'Network connection failed';
@@ -96,22 +65,17 @@ const PGListingPage = () => {
 
                 setError({ type: errorType, message: errorMessage, details: err.response?.data });
                 setLoading(false);
-            } finally {
-                if (isMounted && retryCount > 0) {
-                    // Only set loading false on final attempt
-                    setLoading(false);
-                }
             }
         };
 
-        fetchPGListings();
+        loadPGListings();
 
         return () => {
             isMounted = false;
         };
     }, []);
 
-    // Filter Logic - Runs when filters change
+    // Filter logic
     useEffect(() => {
         let result = [...pgListings];
 
@@ -125,12 +89,12 @@ const PGListingPage = () => {
             );
         }
 
-        // Gender
+        // Gender filter
         if (filters.gender) {
             result = result.filter(pg => pg.gender === filters.gender);
         }
 
-        // Price (using 'rent')
+        // Price filters
         if (filters.minPrice) {
             result = result.filter(pg => (pg.rent || 0) >= parseInt(filters.minPrice));
         }
@@ -141,7 +105,6 @@ const PGListingPage = () => {
         setFilteredListings(result);
     }, [searchTerm, filters, pgListings]);
 
-    // Handlers
     const handleFilterChange = (e) => {
         setFilters(prev => ({ ...prev, [e.target.name]: e.target.value }));
     };
@@ -151,19 +114,39 @@ const PGListingPage = () => {
         setFilters({ gender: '', minPrice: '', maxPrice: '' });
     };
 
-    // --- RENDER ---
+    const handleRetry = () => {
+        setRetrying(true);
+        clearPGCache();
+        window.location.reload();
+    };
+
+    // Loading skeleton
     if (loading) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
-                <LoadingSpinner size="lg" />
-                <p className="mt-4 text-gray-600 dark:text-gray-300 text-center">Loading PGs...</p>
-                <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 text-center">
-                    Server waking up… this may take up to 30 seconds on first load.
-                </p>
+            <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+                {/* Hero Section */}
+                <section className="bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 py-20 text-center text-white">
+                    <div className="max-w-7xl mx-auto px-4">
+                        <h1 className="text-4xl md:text-6xl font-bold mb-6">Find Your Perfect PG</h1>
+                        <p className="text-xl mb-8 opacity-90">Safe, affordable & verified accommodations</p>
+                    </div>
+                </section>
+
+                {/* Loading State */}
+                <div className="flex flex-col items-center justify-center py-20 px-4">
+                    <LoadingSpinner size="lg" />
+                    <p className="mt-4 text-gray-600 dark:text-gray-300 text-center">
+                        {retrying ? 'Retrying connection...' : 'Loading PG listings...'}
+                    </p>
+                    <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 text-center">
+                        First load may take up to 30 seconds (server wake-up)
+                    </p>
+                </div>
             </div>
         );
     }
 
+    // Error state
     if (error) {
         const errorIcon = error.type === 'timeout' ? '⏰' :
             error.type === '404' ? '🔍' :
@@ -177,8 +160,8 @@ const PGListingPage = () => {
                         {error.message}
                     </h2>
                     <p className="text-gray-600 dark:text-gray-400 mb-4">
-                        {error.type === 'timeout' && 'This usually takes 10-20 seconds. Please refresh.'}
-                        {error.type === '404' && 'The backend API route is not responding. Check deployment.'}
+                        {error.type === 'timeout' && 'Server is starting up. Please try again.'}
+                        {error.type === '404' && 'The backend API is not responding. Please contact support.'}
                         {error.type === 'server' && 'The server encountered an error. Please try again.'}
                         {error.type === 'network' && 'Check your internet connection.'}
                         {error.type === 'general' && 'Please try again or contact support.'}
@@ -194,10 +177,11 @@ const PGListingPage = () => {
                         </details>
                     )}
                     <button
-                        onClick={() => window.location.reload()}
-                        className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-md hover:shadow-lg"
+                        onClick={handleRetry}
+                        disabled={retrying}
+                        className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        Refresh Page
+                        {retrying ? 'Retrying...' : 'Retry Connection'}
                     </button>
                 </div>
             </div>
@@ -259,7 +243,7 @@ const PGListingPage = () => {
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {filteredListings.map((pg, index) => (
+                        {filteredListings.map((pg) => (
                             <div key={pg._id} className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-shadow duration-300 group">
                                 <div className="h-48 bg-gray-300 relative overflow-hidden">
                                     <img

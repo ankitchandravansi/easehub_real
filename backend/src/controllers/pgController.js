@@ -6,7 +6,13 @@ import PGHostel from "../models/PGHostel.js";
 export const getAllPGs = async (req, res) => {
     try {
         console.log('[PG API] Fetching all PGs from database...');
-        const pgs = await PGHostel.find().sort("-createdAt");
+
+        // Optimized query with lean() for better performance
+        const pgs = await PGHostel.find()
+            .lean() // Returns plain JS objects instead of Mongoose documents
+            .sort("-createdAt")
+            .limit(100); // Limit to prevent large payloads
+
         console.log(`[PG API] Found ${pgs.length} PGs in database`);
 
         res.status(200).json({
@@ -20,7 +26,8 @@ export const getAllPGs = async (req, res) => {
         console.error('[PG API] Error fetching PGs:', error.message);
         res.status(500).json({
             success: false,
-            message: error.message,
+            message: "Failed to fetch PG listings",
+            error: error.message,
         });
     }
 };
