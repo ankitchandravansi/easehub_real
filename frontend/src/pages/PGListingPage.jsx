@@ -52,7 +52,12 @@ const PGListingPage = () => {
                 console.log(`[PG Fetch] Success: Loaded ${dataToUse.length} PGs`);
 
             } catch (err) {
-                console.error(`[PG Fetch] Error on attempt ${retryCount + 1}:`, err);
+                console.error(`[PG Fetch] Error on attempt ${retryCount + 1}:`, {
+                    message: err.message,
+                    response: err.response?.data,
+                    status: err.response?.status,
+                    code: err.code
+                });
 
                 if (!isMounted) return;
 
@@ -71,12 +76,25 @@ const PGListingPage = () => {
                 setPgListings([]);
                 setFilteredListings([]);
 
-                // Check if it's a timeout error
+                // Set specific error messages
+                let errorType = 'general';
+                let errorMessage = 'Unable to load PG listings';
+
                 if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
-                    setError('timeout');
-                } else {
-                    setError('general');
+                    errorType = 'timeout';
+                    errorMessage = 'Server is starting up (cold start)';
+                } else if (err.response?.status === 404) {
+                    errorType = '404';
+                    errorMessage = 'API endpoint not found - Backend may need redeployment';
+                } else if (err.response?.status >= 500) {
+                    errorType = 'server';
+                    errorMessage = err.response?.data?.message || 'Server error occurred';
+                } else if (err.message?.includes('Network Error')) {
+                    errorType = 'network';
+                    errorMessage = 'Network connection failed';
                 }
+
+                setError({ type: errorType, message: errorMessage, details: err.response?.data });
                 setLoading(false);
             } finally {
                 if (isMounted && retryCount > 0) {
@@ -147,18 +165,34 @@ const PGListingPage = () => {
     }
 
     if (error) {
+        const errorIcon = error.type === 'timeout' ? '⏰' :
+            error.type === '404' ? '🔍' :
+                error.type === 'server' ? '⚠️' : '❌';
+
         return (
             <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
                 <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 text-center">
-                    <div className="text-6xl mb-4">⏰</div>
+                    <div className="text-6xl mb-4">{errorIcon}</div>
                     <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-                        {error === 'timeout' ? 'Server is Waking Up' : 'Connection Issue'}
+                        {error.message}
                     </h2>
-                    <p className="text-gray-600 dark:text-gray-400 mb-6">
-                        {error === 'timeout'
-                            ? 'Our server is starting up (free tier cold start). This usually takes 10-20 seconds. Please refresh the page in a moment.'
-                            : 'Unable to connect to the server. Please check your internet connection and try again.'}
+                    <p className="text-gray-600 dark:text-gray-400 mb-4">
+                        {error.type === 'timeout' && 'This usually takes 10-20 seconds. Please refresh.'}
+                        {error.type === '404' && 'The backend API route is not responding. Check deployment.'}
+                        {error.type === 'server' && 'The server encountered an error. Please try again.'}
+                        {error.type === 'network' && 'Check your internet connection.'}
+                        {error.type === 'general' && 'Please try again or contact support.'}
                     </p>
+                    {error.details && (
+                        <details className="mb-6 text-left">
+                            <summary className="cursor-pointer text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                                Technical Details
+                            </summary>
+                            <pre className="mt-2 p-3 bg-gray-100 dark:bg-gray-700 rounded text-xs overflow-auto">
+                                {JSON.stringify(error.details, null, 2)}
+                            </pre>
+                        </details>
+                    )}
                     <button
                         onClick={() => window.location.reload()}
                         className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-md hover:shadow-lg"

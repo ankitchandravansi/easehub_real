@@ -35,10 +35,13 @@ const app = express();
 app.use(
     cors({
         origin: [
-            process.env.CLIENT_URL,          // Vercel frontend
-            "http://localhost:5173",          // Local frontend
+            "https://easehub-frontend.vercel.app",  // Production frontend (explicit)
+            process.env.CLIENT_URL,                  // Backup env var
+            "http://localhost:5173",                 // Local frontend
         ].filter(Boolean),
         credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization'],
     })
 );
 
