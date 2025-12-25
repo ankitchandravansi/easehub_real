@@ -1,4 +1,4 @@
-import { getAllPGs } from './services';
+import { getAllPGs } from '../services/services';
 
 // Cache configuration
 const CACHE_KEY = 'easehub_pgs_cache';
