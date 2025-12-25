@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { createPG, getPGById, updatePG } from '../../services/pgService';
+import { createPG, getPGById, updatePG } from '../../services/services';
 import { useAuth } from '../../context/AuthContext';
 
 const AdminPGForm = () => {

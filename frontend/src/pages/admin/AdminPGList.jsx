@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getAllPGs, deletePG } from '../../services/pgService';
+import { getAllPGs, deletePG } from '../../services/services';
 
 const AdminPGList = () => {
     const [pgs, setPgs] = useState([]);

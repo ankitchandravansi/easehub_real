@@ -2,11 +2,11 @@ import api from "./api";
 
 // PG Services
 export const getAllPGs = async () => {
-    return await api.get("/pgs");
+    return await api.get("/pg");
 };
 
 export const getPGById = async (id) => {
-    return await api.get(`/pgs/${id}`);
+    return await api.get(`/pg/${id}`);
 };
 
 // Meal Services
@@ -46,15 +46,15 @@ export const getAdminStats = async () => {
 };
 
 export const createPG = async (data) => {
-    return await api.post("/pgs", data);
+    return await api.post("/pg", data);
 };
 
 export const updatePG = async (id, data) => {
-    return await api.put(`/pgs/${id}`, data);
+    return await api.put(`/pg/${id}`, data);
 };
 
 export const deletePG = async (id) => {
-    return await api.delete(`/pgs/${id}`);
+    return await api.delete(`/pg/${id}`);
 };
 
 // Booking Services
