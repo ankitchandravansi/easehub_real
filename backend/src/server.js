@@ -1,47 +1,46 @@
-import dotenv from "dotenv";
-import path from "path";
-import { fileURLToPath } from "url";
 import express from "express";
 import cors from "cors";
-import connectDB from "./config/database.js";
+import dotenv from "dotenv";
+import connectDB from "./src/config/database.js";
 
-// ================= ENV LOAD =================
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// ROUTES
+import authRoutes from "./src/routes/authRoutes.js";
+import pgRoutes from "./src/routes/pgRoutes.js";
+import mealRoutes from "./src/routes/mealRoutes.js";
+import laundryRoutes from "./src/routes/laundryRoutes.js";
+import requestRoutes from "./src/routes/requestRoutes.js";
+import adminRoutes from "./src/routes/adminRoutes.js";
+import bookingRoutes from "./src/routes/bookingRoutes.js";
 
-dotenv.config({
-    path: path.resolve(__dirname, "../.env"),
-});
+dotenv.config();
 
-// ================= APP =================
 const app = express();
 
-// ================= CORS =================
+// ================== CORS ==================
 app.use(
     cors({
         origin: [
             "https://easehub-frontend.vercel.app",
-            process.env.CLIENT_URL,
             "http://localhost:5173",
+            process.env.CLIENT_URL,
         ].filter(Boolean),
         credentials: true,
     })
 );
 
-// ================= BODY =================
+// ================== BODY ==================
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
-// ================= ROUTES =================
-import authRoutes from "./routes/authRoutes.js";
-import pgRoutes from "./routes/pgRoutes.js";
-import mealRoutes from "./routes/mealRoutes.js";
-import laundryRoutes from "./routes/laundryRoutes.js";
-import requestRoutes from "./routes/requestRoutes.js";
-import adminRoutes from "./routes/adminRoutes.js";
-import bookingRoutes from "./routes/bookingRoutes.js";
+// ================== HEALTH ==================
+app.get("/api/health", (req, res) => {
+    res.json({
+        success: true,
+        message: "EaseHub API running ✅",
+    });
+});
 
-// 🔥🔥🔥 MAIN FIX HERE 🔥🔥🔥
+// ================== API ROUTES ==================
+// 🔥🔥🔥 IMPORTANT 🔥🔥🔥
 app.use("/api/pg", pgRoutes);
 
 app.use("/api/auth", authRoutes);
@@ -51,15 +50,7 @@ app.use("/api/requests", requestRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/bookings", bookingRoutes);
 
-// ================= HEALTH =================
-app.get("/api/health", (req, res) => {
-    res.json({
-        success: true,
-        message: "EaseHub API is running ✅",
-    });
-});
-
-// ================= 404 =================
+// ================== 404 ==================
 app.use((req, res) => {
     res.status(404).json({
         success: false,
@@ -67,25 +58,19 @@ app.use((req, res) => {
     });
 });
 
-// ================= ERROR =================
-app.use((err, req, res, next) => {
-    console.error(err);
-    res.status(500).json({
-        success: false,
-        message: err.message,
-    });
-});
-
-// ================= START =================
-const PORT = process.env.PORT || 5002;
+// ================== START ==================
+const PORT = process.env.PORT || 10000;
 
 const startServer = async () => {
-    await connectDB();
-    app.listen(PORT, () => {
-        console.log(`🚀 Server running on port ${PORT}`);
-    });
+    try {
+        await connectDB();
+        app.listen(PORT, () => {
+            console.log(`🚀 Server running on port ${PORT}`);
+        });
+    } catch (err) {
+        console.error("❌ Server start failed", err);
+        process.exit(1);
+    }
 };
 
 startServer();
-
-export default app;
