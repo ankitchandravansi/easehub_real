@@ -1,16 +1,16 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import connectDB from "./src/config/database.js";
+import connectDB from "./config/database.js";
 
-// ROUTES
-import authRoutes from "./src/routes/authRoutes.js";
-import pgRoutes from "./src/routes/pgRoutes.js";
-import mealRoutes from "./src/routes/mealRoutes.js";
-import laundryRoutes from "./src/routes/laundryRoutes.js";
-import requestRoutes from "./src/routes/requestRoutes.js";
-import adminRoutes from "./src/routes/adminRoutes.js";
-import bookingRoutes from "./src/routes/bookingRoutes.js";
+// ROUTES - Fixed import paths (removed extra ./src/)
+import authRoutes from "./routes/authRoutes.js";
+import pgRoutes from "./routes/pgRoutes.js";
+import mealRoutes from "./routes/mealRoutes.js";
+import laundryRoutes from "./routes/laundryRoutes.js";
+import requestRoutes from "./routes/requestRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js";
+import bookingRoutes from "./routes/bookingRoutes.js";
 
 dotenv.config();
 
@@ -40,9 +40,7 @@ app.get("/api/health", (req, res) => {
 });
 
 // ================== API ROUTES ==================
-// 🔥🔥🔥 IMPORTANT 🔥🔥🔥
 app.use("/api/pg", pgRoutes);
-
 app.use("/api/auth", authRoutes);
 app.use("/api/meals", mealRoutes);
 app.use("/api/laundry", laundryRoutes);

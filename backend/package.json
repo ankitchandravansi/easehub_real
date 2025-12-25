@@ -1,22 +1,11 @@
 {
   "name": "easehub-backend",
   "version": "1.0.0",
-  "description": "EaseHub Backend API - College student services management platform",
   "type": "module",
-  "main": "server.js",
+  "private": true,
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "node --watch src/server.js",
-    "seed": "node src/seedPGs.js"
+    "start": "node src/server.js"
   },
-  "keywords": [
-    "easehub",
-    "student-services",
-    "pg-management",
-    "meal-services"
-  ],
-  "author": "EaseHub Team",
-  "license": "MIT",
   "dependencies": {
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
