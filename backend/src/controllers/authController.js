@@ -54,32 +54,47 @@ export const signup = async (req, res) => {
             password
         });
 
-        // Generate OTP
+        // CRITICAL: Generate and save OTP to DB first (independent of email)
         const otp = user.setEmailVerificationOTP();
         await user.save();
 
-        // Send verification email
-        await sendEmail({
-            to: user.email,
-            subject: 'Email Verification - EaseHub',
-            html: `
-                <h1>Welcome to EaseHub!</h1>
-                <p>Hi ${user.name},</p>
-                <p>Thank you for signing up. Please verify your email using the OTP below:</p>
-                <h2 style="color: #4F46E5; letter-spacing: 5px;">${otp}</h2>
-                <p>This OTP will expire in 5 minutes.</p>
-                <p>If you didn't request this, please ignore this email.</p>
-                <br>
-                <p>Best regards,<br>EaseHub Team</p>
-            `
-        });
+        console.log(`✅ User created: ${user.email} | OTP generated and saved to DB`);
 
+        // CRITICAL: Email sending wrapped in try-catch - MUST NOT block response
+        let emailSent = false;
+        try {
+            await sendEmail({
+                to: user.email,
+                subject: 'Email Verification - EaseHub',
+                html: `
+                    <h1>Welcome to EaseHub!</h1>
+                    <p>Hi ${user.name},</p>
+                    <p>Thank you for signing up. Please verify your email using the OTP below:</p>
+                    <h2 style="color: #4F46E5; letter-spacing: 5px;">${otp}</h2>
+                    <p>This OTP will expire in 5 minutes.</p>
+                    <p>If you didn't request this, please ignore this email.</p>
+                    <br>
+                    <p>Best regards,<br>EaseHub Team</p>
+                `
+            });
+            emailSent = true;
+            console.log(`✅ Verification email sent to ${user.email}`);
+        } catch (emailError) {
+            // Email failed but user is already created - just log the error
+            console.error(`⚠️  Email send failed for ${user.email}:`, emailError.message);
+            console.log(`ℹ️  User can still verify using resend OTP`);
+        }
+
+        // ALWAYS return success if user + OTP are saved
         res.status(201).json({
             success: true,
-            message: 'Account created successfully. Please check your email for verification OTP.',
+            message: emailSent
+                ? 'Account created successfully. Please check your email for verification OTP.'
+                : 'Account created successfully. Email delivery delayed - please use "Resend OTP" if needed.',
             data: {
                 userId: user._id,
-                email: user.email
+                email: user.email,
+                emailSent
             }
         });
     } catch (error) {
@@ -189,10 +204,11 @@ export const resendOTP = async (req, res) => {
             });
         }
 
-        // Check cooldown (60 seconds)
+        // REDUCED cooldown for development (30 seconds instead of 60)
+        const cooldownTime = 30 * 1000; // 30 seconds
+
         if (user.lastOTPSentAt) {
             const timeSinceLastOTP = Date.now() - new Date(user.lastOTPSentAt).getTime();
-            const cooldownTime = 60 * 1000; // 60 seconds
 
             if (timeSinceLastOTP < cooldownTime) {
                 const remainingTime = Math.ceil((cooldownTime - timeSinceLastOTP) / 1000);
@@ -203,29 +219,46 @@ export const resendOTP = async (req, res) => {
             }
         }
 
-        // Generate new OTP
+        // CRITICAL: Generate NEW OTP and save to DB first (independent of email)
         const otp = user.setEmailVerificationOTP();
         await user.save();
 
-        // Send email
-        await sendEmail({
-            to: user.email,
-            subject: 'Email Verification OTP - EaseHub',
-            html: `
-                <h1>Email Verification</h1>
-                <p>Hi ${user.name},</p>
-                <p>Your new verification OTP is:</p>
-                <h2 style="color: #4F46E5; letter-spacing: 5px;">${otp}</h2>
-                <p>This OTP will expire in 5 minutes.</p>
-                <p>If you didn't request this, please ignore this email.</p>
-                <br>
-                <p>Best regards,<br>EaseHub Team</p>
-            `
-        });
+        console.log(`✅ New OTP generated for ${user.email} | Saved to DB`);
 
+        // CRITICAL: Email sending wrapped in try-catch - MUST NOT block response
+        let emailSent = false;
+        try {
+            await sendEmail({
+                to: user.email,
+                subject: 'Email Verification OTP - EaseHub',
+                html: `
+                    <h1>Email Verification</h1>
+                    <p>Hi ${user.name},</p>
+                    <p>Your new verification OTP is:</p>
+                    <h2 style="color: #4F46E5; letter-spacing: 5px;">${otp}</h2>
+                    <p>This OTP will expire in 5 minutes.</p>
+                    <p>If you didn't request this, please ignore this email.</p>
+                    <br>
+                    <p>Best regards,<br>EaseHub Team</p>
+                `
+            });
+            emailSent = true;
+            console.log(`✅ OTP email sent to ${user.email}`);
+        } catch (emailError) {
+            // Email failed but OTP is already saved - just log the error
+            console.error(`⚠️  Email send failed for ${user.email}:`, emailError.message);
+            console.log(`ℹ️  OTP is saved in DB, user can still verify manually`);
+        }
+
+        // ALWAYS return success if OTP is saved
         res.status(200).json({
             success: true,
-            message: 'New OTP sent to your email'
+            message: emailSent
+                ? 'New OTP sent to your email'
+                : 'New OTP generated. Email delivery delayed - please try again or contact support.',
+            data: {
+                emailSent
+            }
         });
     } catch (error) {
         console.error('Resend OTP Error:', error);
@@ -324,10 +357,11 @@ export const forgotPassword = async (req, res) => {
             });
         }
 
-        // Check cooldown
+        // REDUCED cooldown for development
+        const cooldownTime = 30 * 1000; // 30 seconds
+
         if (user.lastOTPSentAt) {
             const timeSinceLastOTP = Date.now() - new Date(user.lastOTPSentAt).getTime();
-            const cooldownTime = 60 * 1000;
 
             if (timeSinceLastOTP < cooldownTime) {
                 const remainingTime = Math.ceil((cooldownTime - timeSinceLastOTP) / 1000);
@@ -338,29 +372,44 @@ export const forgotPassword = async (req, res) => {
             }
         }
 
-        // Generate OTP
+        // CRITICAL: Generate OTP and save to DB first (independent of email)
         const otp = user.setPasswordResetOTP();
         await user.save();
 
-        // Send email
-        await sendEmail({
-            to: user.email,
-            subject: 'Password Reset OTP - EaseHub',
-            html: `
-                <h1>Password Reset Request</h1>
-                <p>Hi ${user.name},</p>
-                <p>You requested to reset your password. Use the OTP below:</p>
-                <h2 style="color: #4F46E5; letter-spacing: 5px;">${otp}</h2>
-                <p>This OTP will expire in 5 minutes.</p>
-                <p>If you didn't request this, please ignore this email.</p>
-                <br>
-                <p>Best regards,<br>EaseHub Team</p>
-            `
-        });
+        console.log(`✅ Password reset OTP generated for ${user.email} | Saved to DB`);
+
+        // CRITICAL: Email sending wrapped in try-catch - MUST NOT block response
+        let emailSent = false;
+        try {
+            await sendEmail({
+                to: user.email,
+                subject: 'Password Reset OTP - EaseHub',
+                html: `
+                    <h1>Password Reset Request</h1>
+                    <p>Hi ${user.name},</p>
+                    <p>You requested to reset your password. Use the OTP below:</p>
+                    <h2 style="color: #4F46E5; letter-spacing: 5px;">${otp}</h2>
+                    <p>This OTP will expire in 5 minutes.</p>
+                    <p>If you didn't request this, please ignore this email.</p>
+                    <br>
+                    <p>Best regards,<br>EaseHub Team</p>
+                `
+            });
+            emailSent = true;
+            console.log(`✅ Password reset email sent to ${user.email}`);
+        } catch (emailError) {
+            console.error(`⚠️  Email send failed for ${user.email}:`, emailError.message);
+            console.log(`ℹ️  OTP is saved in DB, user can still reset password manually`);
+        }
 
         res.status(200).json({
             success: true,
-            message: 'Password reset OTP sent to your email'
+            message: emailSent
+                ? 'Password reset OTP sent to your email'
+                : 'Password reset OTP generated. Email delivery delayed - please try again.',
+            data: {
+                emailSent
+            }
         });
     } catch (error) {
         console.error('Forgot Password Error:', error);
