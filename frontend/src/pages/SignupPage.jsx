@@ -1,26 +1,26 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { signup } from "../services/authService";
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { signup } from '../services/authService';
 
 const SignupPage = () => {
     const navigate = useNavigate();
 
     const [formData, setFormData] = useState({
-        name: "",
-        email: "",
-        password: "",
-        confirmPassword: "",
+        name: '',
+        email: '',
+        password: '',
+        confirmPassword: '',
     });
 
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState("");
+    const [error, setError] = useState('');
 
     const handleChange = (e) => {
         setFormData((prev) => ({
             ...prev,
             [e.target.name]: e.target.value,
         }));
-        setError("");
+        setError('');
     };
 
     const handleSubmit = async (e) => {
@@ -28,37 +28,41 @@ const SignupPage = () => {
 
         const { name, email, password, confirmPassword } = formData;
 
-        // ✅ HARD VALIDATION (NO SILENT FAIL)
         if (!name || !email || !password || !confirmPassword) {
-            setError("Please provide all required fields");
+            setError('Please provide all required fields');
             return;
         }
 
         if (password !== confirmPassword) {
-            setError("Passwords do not match");
+            setError('Passwords do not match');
+            return;
+        }
+
+        if (password.length < 6) {
+            setError('Password must be at least 6 characters');
             return;
         }
 
         setLoading(true);
-        setError("");
+        setError('');
 
         try {
-            console.log("➡️ Signup payload:", { name, email, password });
-
             const res = await signup({ name, email, password });
 
-            console.log("✅ Signup response:", res);
-
             if (res.success) {
-                navigate("/verify-email", { state: { email } });
+                // ✅ Redirect directly to login
+                navigate('/login', {
+                    state: {
+                        message: 'Account created successfully! Please login.',
+                    },
+                });
             } else {
-                setError(res.message || "Signup failed");
+                setError(res.message || 'Signup failed');
             }
         } catch (err) {
-            console.error("❌ Signup error:", err);
+            console.error('Signup error:', err);
             setError(
-                err?.response?.data?.message ||
-                "Network error. Please try again."
+                err?.response?.data?.message || 'Network error. Please try again.'
             );
         } finally {
             setLoading(false);
@@ -85,7 +89,8 @@ const SignupPage = () => {
                         placeholder="Full Name"
                         value={formData.name}
                         onChange={handleChange}
-                        className="w-full border px-3 py-2 rounded"
+                        className="w-full border px-3 py-2 rounded focus:ring-2 focus:ring-indigo-500"
+                        disabled={loading}
                     />
 
                     <input
@@ -94,16 +99,18 @@ const SignupPage = () => {
                         placeholder="Email"
                         value={formData.email}
                         onChange={handleChange}
-                        className="w-full border px-3 py-2 rounded"
+                        className="w-full border px-3 py-2 rounded focus:ring-2 focus:ring-indigo-500"
+                        disabled={loading}
                     />
 
                     <input
                         type="password"
                         name="password"
-                        placeholder="Password"
+                        placeholder="Password (min 6 characters)"
                         value={formData.password}
                         onChange={handleChange}
-                        className="w-full border px-3 py-2 rounded"
+                        className="w-full border px-3 py-2 rounded focus:ring-2 focus:ring-indigo-500"
+                        disabled={loading}
                     />
 
                     <input
@@ -112,20 +119,21 @@ const SignupPage = () => {
                         placeholder="Confirm Password"
                         value={formData.confirmPassword}
                         onChange={handleChange}
-                        className="w-full border px-3 py-2 rounded"
+                        className="w-full border px-3 py-2 rounded focus:ring-2 focus:ring-indigo-500"
+                        disabled={loading}
                     />
 
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700"
+                        className="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700 disabled:bg-indigo-400"
                     >
-                        {loading ? "Creating Account..." : "Sign Up"}
+                        {loading ? 'Creating Account...' : 'Sign Up'}
                     </button>
                 </form>
 
                 <p className="text-center mt-4">
-                    Already have an account?{" "}
+                    Already have an account?{' '}
                     <Link to="/login" className="text-indigo-600 font-semibold">
                         Login
                     </Link>

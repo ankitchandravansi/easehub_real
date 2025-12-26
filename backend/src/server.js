@@ -16,65 +16,78 @@ dotenv.config();
 
 const app = express();
 
-// ================== CORS - PRODUCTION READY ==================
-// CRITICAL: Must be BEFORE routes and body parsers
+/* =========================================================
+   CORS — FINAL & STABLE (NO DUPLICATE / NO PREFLIGHT BUG)
+   ========================================================= */
+const allowedOrigins = [
+    "https://easehub-frontend.vercel.app",
+    "http://localhost:5173",
+    "http://localhost:5174",
+    process.env.CLIENT_URL,
+].filter(Boolean);
+
 app.use(
     cors({
-        origin: [
-            "https://easehub-frontend.vercel.app",
-            "http://localhost:5173",
-            process.env.CLIENT_URL,
-        ].filter(Boolean),
-        methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-        allowedHeaders: ["Content-Type", "Authorization"],
+        origin: function (origin, callback) {
+            // Allow server-to-server / Postman / curl
+            if (!origin) return callback(null, true);
+
+            if (allowedOrigins.includes(origin)) {
+                return callback(null, true);
+            } else {
+                return callback(
+                    new Error(`CORS blocked for origin: ${origin}`)
+                );
+            }
+        },
         credentials: true,
-        optionsSuccessStatus: 200,
+        methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+        allowedHeaders: ["Content-Type", "Authorization"],
     })
 );
 
-// Handle preflight requests explicitly
-app.options("*", cors());
-
-// ================== BODY PARSERS ==================
-app.use(express.json());
+/* ================= BODY PARSERS ================= */
+app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-// ================== HEALTH CHECK ==================
+/* ================= HEALTH CHECK ================= */
 app.get("/api/health", (req, res) => {
-    res.json({
+    res.status(200).json({
         success: true,
         message: "EaseHub API running ✅",
-        timestamp: new Date().toISOString(),
+        env: process.env.NODE_ENV,
+        time: new Date().toISOString(),
     });
 });
 
-// ================== API ROUTES ==================
-app.use("/api/pg", pgRoutes);
+/* ================= API ROUTES ================= */
 app.use("/api/auth", authRoutes);
+app.use("/api/pg", pgRoutes);
 app.use("/api/meals", mealRoutes);
 app.use("/api/laundry", laundryRoutes);
 app.use("/api/requests", requestRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/bookings", bookingRoutes);
 
-// ================== 404 HANDLER ==================
+/* ================= 404 HANDLER ================= */
 app.use((req, res) => {
     res.status(404).json({
         success: false,
-        message: `Route not found: ${req.originalUrl}`,
+        message: `Route not found: ${req.method} ${req.originalUrl}`,
     });
 });
 
-// ================== ERROR HANDLER ==================
+/* ================= ERROR HANDLER ================= */
 app.use((err, req, res, next) => {
-    console.error("❌ Error:", err);
+    console.error("❌ API Error:", err.message);
+
     res.status(500).json({
         success: false,
         message: err.message || "Internal Server Error",
     });
 });
 
-// ================== START SERVER ==================
+/* ================= START SERVER ================= */
 const PORT = process.env.PORT || 10000;
 
 const startServer = async () => {
@@ -84,13 +97,14 @@ const startServer = async () => {
         app.listen(PORT, "0.0.0.0", () => {
             console.log("=".repeat(50));
             console.log(`🚀 Server running on port ${PORT}`);
-            console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
+            console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
             console.log(`🔗 Backend URL: https://easehub-real.onrender.com`);
-            console.log(`✅ CORS enabled for: https://easehub-frontend.vercel.app`);
+            console.log(`✅ Allowed CORS origins:`);
+            allowedOrigins.forEach((o) => console.log("   •", o));
             console.log("=".repeat(50));
         });
-    } catch (err) {
-        console.error("❌ Server start failed:", err);
+    } catch (error) {
+        console.error("❌ Failed to start server:", error);
         process.exit(1);
     }
 };
