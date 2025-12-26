@@ -1,8 +1,4 @@
-import api from './api';
-
-// =========================
-// AUTH SERVICES (FINAL)
-// =========================
+import api from '../utils/api';
 
 export const signup = async ({ name, email, password }) => {
     const res = await api.post('/auth/signup', { name, email, password });
@@ -33,18 +29,7 @@ export const resetPassword = async ({ email, otp, newPassword }) => {
     const res = await api.post('/auth/reset-password', {
         email,
         otp,
-        newPassword
+        newPassword,
     });
-    return res.data;
-};
-
-// ✅ ADD THIS (VERY IMPORTANT)
-export const getMe = async () => {
-    const res = await api.get('/auth/me');
-    return res.data;
-};
-
-export const logout = async () => {
-    const res = await api.post('/auth/logout');
     return res.data;
 };
