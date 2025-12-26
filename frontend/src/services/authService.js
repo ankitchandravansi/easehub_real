@@ -7,6 +7,13 @@ export const signup = async ({ name, email, password }) => {
         password,
         confirmPassword: password,
     });
+
+    // Save token if signup returns it
+    if (response.data.success && response.data.data?.token) {
+        localStorage.setItem('token', response.data.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.data.user));
+    }
+
     return response.data;
 };
 

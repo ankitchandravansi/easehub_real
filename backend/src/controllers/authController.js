@@ -50,12 +50,19 @@ export const signup = async (req, res) => {
 
         console.log(`✅ User created: ${user.email}`);
 
+        const token = generateToken(user._id);
+
         return res.status(201).json({
             success: true,
-            message: 'Account created successfully. You can now login.',
+            message: 'Account created successfully!',
             data: {
-                userId: user._id,
-                email: user.email,
+                token,
+                user: {
+                    id: user._id,
+                    name: user.name,
+                    email: user.email,
+                    role: user.role,
+                },
             },
         });
     } catch (error) {

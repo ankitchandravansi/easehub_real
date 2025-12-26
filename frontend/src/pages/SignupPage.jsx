@@ -50,10 +50,10 @@ const SignupPage = () => {
             const res = await signup({ name, email, password });
 
             if (res.success) {
-                // ✅ Redirect directly to login
-                navigate('/login', {
+                // ✅ User is now logged in with token, redirect to home
+                navigate('/', {
                     state: {
-                        message: 'Account created successfully! Please login.',
+                        message: 'Account created successfully! Welcome to EaseHub.',
                     },
                 });
             } else {
