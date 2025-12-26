@@ -18,9 +18,7 @@ import BookingSuccessPage from './pages/BookingSuccessPage.jsx';
 import AdminDashboard from './pages/admin/AdminDashboard.jsx';
 import AdminPGList from './pages/admin/AdminPGList.jsx';
 import AdminPGForm from './pages/admin/AdminPGForm.jsx';
-import VerifyEmailPage from './pages/VerifyEmailPage.jsx';
-import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx';
-import ResetPasswordPage from './pages/ResetPasswordPage.jsx';
+
 
 function App() {
   return (
@@ -33,9 +31,7 @@ function App() {
               <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/signup" element={<SignupPage />} />
-              <Route path="/verify-email" element={<VerifyEmailPage />} />
-              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-              <Route path="/reset-password" element={<ResetPasswordPage />} />
+
 
               {/* Service Pages */}
               <Route path="/services/pg" element={<PGListingPage />} />
