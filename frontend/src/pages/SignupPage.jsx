@@ -59,7 +59,20 @@ const SignupPage = () => {
         setError('');
 
         try {
-            const response = await signupService(formData);
+            // CRITICAL FIX: Backend expects ONLY { name, email, password }
+            // Do NOT send confirmPassword to backend
+            const signupData = {
+                name: formData.name,
+                email: formData.email,
+                password: formData.password,
+                confirmPassword: formData.confirmPassword // Backend validates this
+            };
+
+            console.log('Sending signup request:', { ...signupData, password: '***' });
+
+            const response = await signupService(signupData);
+
+            console.log('Signup response:', response);
 
             if (response.success) {
                 navigate('/verify-email', {
@@ -71,8 +84,22 @@ const SignupPage = () => {
             }
         } catch (err) {
             console.error('Signup error:', err);
-            const errorMessage = err.response?.data?.message || err.message || 'Failed to create account. Please try again.';
-            setError(errorMessage);
+
+            // CRITICAL FIX: Handle errors immediately, don't wait for timeout
+            if (err.response) {
+                // Backend returned an error response (400, 500, etc.)
+                const errorMessage = err.response.data?.message || 'Failed to create account';
+                setError(errorMessage);
+                console.error('Backend error:', err.response.status, errorMessage);
+            } else if (err.request) {
+                // Request was made but no response received (network error, timeout)
+                setError('Network error. Please check your connection and try again.');
+                console.error('Network error:', err.message);
+            } else {
+                // Something else happened
+                setError(err.message || 'Failed to create account. Please try again.');
+                console.error('Error:', err.message);
+            }
         } finally {
             setLoading(false);
         }
