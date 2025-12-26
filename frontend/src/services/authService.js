@@ -33,3 +33,15 @@ export const resetPassword = async ({ email, otp, newPassword }) => {
     });
     return res.data;
 };
+// =========================
+// AUTH HELPERS (REQUIRED FOR BUILD)
+// =========================
+
+export const getMe = async () => {
+    const res = await api.get('/auth/me');
+    return res.data;
+};
+
+export const logout = async () => {
+    return { success: true };
+};
