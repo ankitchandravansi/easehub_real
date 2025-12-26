@@ -1,47 +1,67 @@
 import api from '../utils/api';
 
+// Signup - sends ONLY name, email, password (NOT confirmPassword)
 export const signup = async ({ name, email, password }) => {
-    const res = await api.post('/auth/signup', { name, email, password });
-    return res.data;
+    const response = await api.post('/auth/signup', {
+        name,
+        email,
+        password,
+        confirmPassword: password // Backend expects this for validation
+    });
+    return response.data;
 };
 
-export const login = async ({ email, password }) => {
-    const res = await api.post('/auth/login', { email, password });
-    return res.data;
-};
-
+// Verify Email
 export const verifyEmail = async ({ email, otp }) => {
-    const res = await api.post('/auth/verify-email', { email, otp });
-    return res.data;
+    const response = await api.post('/auth/verify-email', { email, otp });
+    if (response.data.success && response.data.data?.token) {
+        localStorage.setItem('token', response.data.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.data.user));
+    }
+    return response.data;
 };
 
+// Resend OTP
 export const resendOTP = async ({ email }) => {
-    const res = await api.post('/auth/resend-otp', { email });
-    return res.data;
+    const response = await api.post('/auth/resend-otp', { email });
+    return response.data;
 };
 
+// Login
+export const login = async ({ email, password }) => {
+    const response = await api.post('/auth/login', { email, password });
+    if (response.data.success && response.data.data?.token) {
+        localStorage.setItem('token', response.data.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.data.user));
+    }
+    return response.data;
+};
+
+// Forgot Password
 export const forgotPassword = async ({ email }) => {
-    const res = await api.post('/auth/forgot-password', { email });
-    return res.data;
+    const response = await api.post('/auth/forgot-password', { email });
+    return response.data;
 };
 
-export const resetPassword = async ({ email, otp, newPassword }) => {
-    const res = await api.post('/auth/reset-password', {
+// Reset Password
+export const resetPassword = async ({ email, otp, newPassword, confirmPassword }) => {
+    const response = await api.post('/auth/reset-password', {
         email,
         otp,
         newPassword,
+        confirmPassword
     });
-    return res.data;
+    return response.data;
 };
-// =========================
-// AUTH HELPERS (REQUIRED FOR BUILD)
-// =========================
 
+// Get Current User
 export const getMe = async () => {
-    const res = await api.get('/auth/me');
-    return res.data;
+    const response = await api.get('/auth/me');
+    return response.data;
 };
 
-export const logout = async () => {
-    return { success: true };
+// Logout
+export const logout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
 };

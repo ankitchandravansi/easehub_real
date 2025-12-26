@@ -1,18 +1,15 @@
 import axios from 'axios';
 
-// Use environment variable for API base URL (already includes /api)
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5002/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5002/api';
 
 const api = axios.create({
-    baseURL: API_URL,
-    timeout: 30000, // 30 seconds for Render cold starts
-    withCredentials: true, // CRITICAL: Required for CORS with credentials
+    baseURL: API_BASE_URL,
+    timeout: 15000,
     headers: {
-        'Content-Type': 'application/json'
-    }
+        'Content-Type': 'application/json',
+    },
+    withCredentials: true,
 });
-
-console.log('[API Client] Configured with base URL:', API_URL);
 
 // Request interceptor
 api.interceptors.request.use(
@@ -21,31 +18,28 @@ api.interceptors.request.use(
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
+        console.log(`[API] ${config.method.toUpperCase()} ${config.baseURL}${config.url}`);
         return config;
     },
     (error) => {
+        console.error('[API] Request error:', error);
         return Promise.reject(error);
     }
 );
 
 // Response interceptor
 api.interceptors.response.use(
-    (response) => response,
+    (response) => {
+        console.log(`[API] Response:`, response.status, response.data);
+        return response;
+    },
     (error) => {
-        // Log detailed error for debugging
-        console.error('[API Error]', {
-            url: error.config?.url,
-            method: error.config?.method,
-            status: error.response?.status,
-            message: error.response?.data?.message || error.message,
-            data: error.response?.data
-        });
-
-        if (error.response?.status === 401) {
-            // Clear auth data on 401
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            window.location.href = '/login';
+        if (error.response) {
+            console.error(`[API] Error ${error.response.status}:`, error.response.data);
+        } else if (error.request) {
+            console.error('[API] No response received:', error.message);
+        } else {
+            console.error('[API] Error:', error.message);
         }
         return Promise.reject(error);
     }
