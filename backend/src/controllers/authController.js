@@ -2,13 +2,14 @@ import User from '../models/User.js';
 import jwt from 'jsonwebtoken';
 import { sendEmail } from '../utils/sendEmail.js';
 
-// Generate JWT Token
+// ==================== JWT TOKEN GENERATION ====================
 const generateToken = (userId) => {
     return jwt.sign({ userId }, process.env.JWT_SECRET, {
         expiresIn: '30d'
     });
 };
 
+// ==================== 1️⃣ SIGNUP (OTP REQUIRED) ====================
 // @desc    Register new user
 // @route   POST /api/auth/signup
 // @access  Public
@@ -16,7 +17,7 @@ export const signup = async (req, res) => {
     try {
         const { name, email, password, confirmPassword } = req.body;
 
-        // Validation
+        // ========== VALIDATION ==========
         if (!name || !email || !password || !confirmPassword) {
             return res.status(400).json({
                 success: false,
@@ -47,20 +48,21 @@ export const signup = async (req, res) => {
             });
         }
 
-        // Create user
+        // ========== CREATE USER IN DB (CRITICAL: BEFORE EMAIL) ==========
         const user = await User.create({
             name,
             email,
             password
         });
 
-        // CRITICAL: Generate and save OTP to DB first (independent of email)
+        // ========== GENERATE OTP AND SAVE TO DB ==========
         const otp = user.setEmailVerificationOTP();
         await user.save();
 
-        console.log(`✅ User created: ${user.email} | OTP generated and saved to DB`);
+        console.log(`✅ User created: ${user.email} | OTP: ${otp} (saved to DB)`);
 
-        // CRITICAL: Email sending wrapped in try-catch - MUST NOT block response
+        // ========== SEND EMAIL (NON-BLOCKING) ==========
+        // CRITICAL: Email wrapped in try-catch - MUST NOT block response
         let emailSent = false;
         try {
             await sendEmail({
@@ -85,7 +87,7 @@ export const signup = async (req, res) => {
             console.log(`ℹ️  User can still verify using resend OTP`);
         }
 
-        // ALWAYS return success if user + OTP are saved
+        // ========== ALWAYS RETURN SUCCESS IF USER + OTP ARE SAVED ==========
         res.status(201).json({
             success: true,
             message: emailSent
@@ -94,7 +96,7 @@ export const signup = async (req, res) => {
             data: {
                 userId: user._id,
                 email: user.email,
-                emailSent
+                emailSent // Let frontend know if email was sent
             }
         });
     } catch (error) {
@@ -106,6 +108,7 @@ export const signup = async (req, res) => {
     }
 };
 
+// ==================== 2️⃣ EMAIL VERIFICATION ====================
 // @desc    Verify email with OTP
 // @route   POST /api/auth/verify-email
 // @access  Public
@@ -113,6 +116,7 @@ export const verifyEmail = async (req, res) => {
     try {
         const { email, otp } = req.body;
 
+        // ========== VALIDATION ==========
         if (!email || !otp) {
             return res.status(400).json({
                 success: false,
@@ -120,6 +124,7 @@ export const verifyEmail = async (req, res) => {
             });
         }
 
+        // ========== FIND USER WITH OTP FIELDS ==========
         const user = await User.findOne({ email }).select('+emailVerificationOTP +emailVerificationOTPExpiry');
 
         if (!user) {
@@ -136,6 +141,7 @@ export const verifyEmail = async (req, res) => {
             });
         }
 
+        // ========== VERIFY OTP ==========
         const isValid = user.verifyEmailOTP(otp);
 
         if (!isValid) {
@@ -145,10 +151,14 @@ export const verifyEmail = async (req, res) => {
             });
         }
 
+        // ========== MARK AS VERIFIED AND CLEAR OTP ==========
         user.isEmailVerified = true;
         user.clearEmailVerificationOTP();
         await user.save();
 
+        console.log(`✅ Email verified for ${user.email}`);
+
+        // ========== GENERATE TOKEN AND RETURN ==========
         const token = generateToken(user._id);
 
         res.status(200).json({
@@ -174,6 +184,7 @@ export const verifyEmail = async (req, res) => {
     }
 };
 
+// ==================== 3️⃣ RESEND OTP (SIGNUP ONLY) ====================
 // @desc    Resend verification OTP
 // @route   POST /api/auth/resend-otp
 // @access  Public
@@ -181,6 +192,7 @@ export const resendOTP = async (req, res) => {
     try {
         const { email } = req.body;
 
+        // ========== VALIDATION ==========
         if (!email) {
             return res.status(400).json({
                 success: false,
@@ -204,7 +216,8 @@ export const resendOTP = async (req, res) => {
             });
         }
 
-        // REDUCED cooldown for development (30 seconds instead of 60)
+        // ========== COOLDOWN CHECK ==========
+        // 30 seconds for development, increase to 60-120 for production
         const cooldownTime = 30 * 1000; // 30 seconds
 
         if (user.lastOTPSentAt) {
@@ -219,13 +232,13 @@ export const resendOTP = async (req, res) => {
             }
         }
 
-        // CRITICAL: Generate NEW OTP and save to DB first (independent of email)
+        // ========== GENERATE NEW OTP AND SAVE TO DB ==========
         const otp = user.setEmailVerificationOTP();
         await user.save();
 
-        console.log(`✅ New OTP generated for ${user.email} | Saved to DB`);
+        console.log(`✅ New OTP generated for ${user.email} | OTP: ${otp} (saved to DB)`);
 
-        // CRITICAL: Email sending wrapped in try-catch - MUST NOT block response
+        // ========== SEND EMAIL (NON-BLOCKING) ==========
         let emailSent = false;
         try {
             await sendEmail({
@@ -250,7 +263,7 @@ export const resendOTP = async (req, res) => {
             console.log(`ℹ️  OTP is saved in DB, user can still verify manually`);
         }
 
-        // ALWAYS return success if OTP is saved
+        // ========== ALWAYS RETURN SUCCESS IF OTP IS SAVED ==========
         res.status(200).json({
             success: true,
             message: emailSent
@@ -269,6 +282,7 @@ export const resendOTP = async (req, res) => {
     }
 };
 
+// ==================== 4️⃣ LOGIN (NO OTP) ====================
 // @desc    Login user
 // @route   POST /api/auth/login
 // @access  Public
@@ -276,6 +290,7 @@ export const login = async (req, res) => {
     try {
         const { email, password } = req.body;
 
+        // ========== VALIDATION ==========
         if (!email || !password) {
             return res.status(400).json({
                 success: false,
@@ -283,6 +298,7 @@ export const login = async (req, res) => {
             });
         }
 
+        // ========== FIND USER WITH PASSWORD ==========
         const user = await User.findOne({ email }).select('+password');
 
         if (!user) {
@@ -292,6 +308,7 @@ export const login = async (req, res) => {
             });
         }
 
+        // ========== VERIFY PASSWORD ==========
         const isPasswordMatch = await user.comparePassword(password);
 
         if (!isPasswordMatch) {
@@ -301,15 +318,21 @@ export const login = async (req, res) => {
             });
         }
 
+        // ========== CHECK EMAIL VERIFICATION ==========
+        // CRITICAL: Login requires verified email, but NO OTP generation here
         if (!user.isEmailVerified) {
             return res.status(403).json({
                 success: false,
                 message: 'Please verify your email before logging in',
-                requiresVerification: true
+                requiresVerification: true,
+                email: user.email // Frontend can use this to show resend OTP option
             });
         }
 
+        // ========== GENERATE TOKEN AND RETURN ==========
         const token = generateToken(user._id);
+
+        console.log(`✅ Login successful for ${user.email}`);
 
         res.status(200).json({
             success: true,
@@ -334,6 +357,7 @@ export const login = async (req, res) => {
     }
 };
 
+// ==================== 5️⃣ FORGOT PASSWORD (OTP REQUIRED) ====================
 // @desc    Forgot password
 // @route   POST /api/auth/forgot-password
 // @access  Public
@@ -341,6 +365,7 @@ export const forgotPassword = async (req, res) => {
     try {
         const { email } = req.body;
 
+        // ========== VALIDATION ==========
         if (!email) {
             return res.status(400).json({
                 success: false,
@@ -357,7 +382,7 @@ export const forgotPassword = async (req, res) => {
             });
         }
 
-        // REDUCED cooldown for development
+        // ========== COOLDOWN CHECK ==========
         const cooldownTime = 30 * 1000; // 30 seconds
 
         if (user.lastOTPSentAt) {
@@ -372,13 +397,13 @@ export const forgotPassword = async (req, res) => {
             }
         }
 
-        // CRITICAL: Generate OTP and save to DB first (independent of email)
+        // ========== GENERATE PASSWORD RESET OTP AND SAVE TO DB ==========
         const otp = user.setPasswordResetOTP();
         await user.save();
 
-        console.log(`✅ Password reset OTP generated for ${user.email} | Saved to DB`);
+        console.log(`✅ Password reset OTP generated for ${user.email} | OTP: ${otp} (saved to DB)`);
 
-        // CRITICAL: Email sending wrapped in try-catch - MUST NOT block response
+        // ========== SEND EMAIL (NON-BLOCKING) ==========
         let emailSent = false;
         try {
             await sendEmail({
@@ -402,6 +427,7 @@ export const forgotPassword = async (req, res) => {
             console.log(`ℹ️  OTP is saved in DB, user can still reset password manually`);
         }
 
+        // ========== ALWAYS RETURN SUCCESS IF OTP IS SAVED ==========
         res.status(200).json({
             success: true,
             message: emailSent
@@ -420,6 +446,7 @@ export const forgotPassword = async (req, res) => {
     }
 };
 
+// ==================== 6️⃣ RESET PASSWORD ====================
 // @desc    Reset password
 // @route   POST /api/auth/reset-password
 // @access  Public
@@ -427,6 +454,7 @@ export const resetPassword = async (req, res) => {
     try {
         const { email, otp, newPassword, confirmPassword } = req.body;
 
+        // ========== VALIDATION ==========
         if (!email || !otp || !newPassword || !confirmPassword) {
             return res.status(400).json({
                 success: false,
@@ -448,6 +476,7 @@ export const resetPassword = async (req, res) => {
             });
         }
 
+        // ========== FIND USER WITH PASSWORD RESET OTP ==========
         const user = await User.findOne({ email }).select('+passwordResetOTP +passwordResetOTPExpiry +password');
 
         if (!user) {
@@ -457,6 +486,7 @@ export const resetPassword = async (req, res) => {
             });
         }
 
+        // ========== VERIFY OTP ==========
         const isValid = user.verifyPasswordResetOTP(otp);
 
         if (!isValid) {
@@ -466,9 +496,12 @@ export const resetPassword = async (req, res) => {
             });
         }
 
+        // ========== UPDATE PASSWORD AND CLEAR OTP ==========
         user.password = newPassword;
         user.clearPasswordResetOTP();
         await user.save();
+
+        console.log(`✅ Password reset successful for ${user.email}`);
 
         res.status(200).json({
             success: true,
@@ -483,6 +516,7 @@ export const resetPassword = async (req, res) => {
     }
 };
 
+// ==================== ADDITIONAL ROUTES ====================
 // @desc    Get current user
 // @route   GET /api/auth/me
 // @access  Private
