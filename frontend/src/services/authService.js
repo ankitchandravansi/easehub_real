@@ -1,61 +1,59 @@
-import api from '../utils/api';
+import api from './api';
 
-// Remove local axios instance and interceptors as they are in utils/api.js
+// =========================
+// AUTH SERVICES (FIXED)
+// =========================
 
-// Signup
-export const signup = async (data) => {
-    const response = await api.post('/auth/signup', data);
+export const signup = async ({ name, email, password }) => {
+    const response = await api.post('/auth/signup', {
+        name,
+        email,
+        password
+    });
+
     return response.data;
 };
 
-// Verify Email
-export const verifyEmail = async (data) => {
-    const response = await api.post('/auth/verify-email', data);
-    if (response.data.success && response.data.data.token) {
-        localStorage.setItem('token', response.data.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data.data.user));
-    }
+export const login = async ({ email, password }) => {
+    const response = await api.post('/auth/login', {
+        email,
+        password
+    });
+
     return response.data;
 };
 
-// Resend OTP
-export const resendOTP = async (data) => {
-    const response = await api.post('/auth/resend-otp', data);
+export const verifyEmail = async ({ email, otp }) => {
+    const response = await api.post('/auth/verify-email', {
+        email,
+        otp
+    });
+
     return response.data;
 };
 
-// Login
-export const login = async (data) => {
-    const response = await api.post('/auth/login', data);
-    if (response.data.success && response.data.data.token) {
-        localStorage.setItem('token', response.data.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data.data.user));
-    }
+export const resendOTP = async ({ email }) => {
+    const response = await api.post('/auth/resend-otp', {
+        email
+    });
+
     return response.data;
 };
 
-// Forgot Password
-export const forgotPassword = async (data) => {
-    const response = await api.post('/auth/forgot-password', data);
+export const forgotPassword = async ({ email }) => {
+    const response = await api.post('/auth/forgot-password', {
+        email
+    });
+
     return response.data;
 };
 
-// Reset Password
-export const resetPassword = async (data) => {
-    const response = await api.post('/auth/reset-password', data);
+export const resetPassword = async ({ email, otp, newPassword }) => {
+    const response = await api.post('/auth/reset-password', {
+        email,
+        otp,
+        newPassword
+    });
+
     return response.data;
 };
-
-// Get Current User
-export const getMe = async () => {
-    const response = await api.get('/auth/me');
-    return response.data;
-};
-
-// Logout
-export const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-};
-
-export default api;
