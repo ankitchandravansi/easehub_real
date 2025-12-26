@@ -1,181 +1,138 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { signup } from '../services/authService';
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { signup } from "../services/authService";
 
-export default function SignupPage() {
+const SignupPage = () => {
     const navigate = useNavigate();
+
     const [formData, setFormData] = useState({
-        name: '',
-        email: '',
-        password: '',
-        confirmPassword: ''
+        name: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
     });
+
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
+    const [error, setError] = useState("");
 
     const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
-        setError('');
+        setFormData((prev) => ({
+            ...prev,
+            [e.target.name]: e.target.value,
+        }));
+        setError("");
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError('');
 
         const { name, email, password, confirmPassword } = formData;
 
-        // Frontend validation
-        if (!name.trim() || !email.trim() || !password || !confirmPassword) {
-            return setError('All fields are required');
-        }
-
-        if (name.trim().length < 2) {
-            return setError('Name must be at least 2 characters');
-        }
-
-        if (password.length < 6) {
-            return setError('Password must be at least 6 characters');
+        // ✅ HARD VALIDATION (NO SILENT FAIL)
+        if (!name || !email || !password || !confirmPassword) {
+            setError("Please provide all required fields");
+            return;
         }
 
         if (password !== confirmPassword) {
-            return setError('Passwords do not match');
+            setError("Passwords do not match");
+            return;
         }
 
         setLoading(true);
+        setError("");
 
         try {
-            // Send only name, email, password to backend
-            const response = await signup({
-                name: name.trim(),
-                email: email.trim(),
-                password
-            });
+            console.log("➡️ Signup payload:", { name, email, password });
 
-            if (response.success) {
-                navigate('/verify-email', {
-                    state: {
-                        email: email.trim(),
-                        message: response.message
-                    }
-                });
+            const res = await signup({ name, email, password });
+
+            console.log("✅ Signup response:", res);
+
+            if (res.success) {
+                navigate("/verify-email", { state: { email } });
             } else {
-                setError(response.message || 'Signup failed');
+                setError(res.message || "Signup failed");
             }
         } catch (err) {
-            console.error('Signup error:', err);
-
-            if (err.response?.data?.message) {
-                setError(err.response.data.message);
-            } else if (err.request) {
-                setError('Network error. Please check your connection and try again.');
-            } else {
-                setError('An error occurred. Please try again.');
-            }
+            console.error("❌ Signup error:", err);
+            setError(
+                err?.response?.data?.message ||
+                "Network error. Please try again."
+            );
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center px-4 py-12">
-            <div className="max-w-md w-full">
-                <div className="bg-white rounded-2xl shadow-xl p-8">
-                    <div className="text-center mb-8">
-                        <h1 className="text-3xl font-bold text-gray-800 mb-2">Create Account</h1>
-                        <p className="text-gray-600">Join EaseHub today</p>
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+            <div className="bg-white p-8 rounded-xl shadow-md w-full max-w-md">
+                <h2 className="text-2xl font-bold text-center mb-6">
+                    Create Account
+                </h2>
+
+                {error && (
+                    <div className="mb-4 text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded">
+                        {error}
                     </div>
+                )}
 
-                    {error && (
-                        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
-                            {error}
-                        </div>
-                    )}
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <input
+                        type="text"
+                        name="name"
+                        placeholder="Full Name"
+                        value={formData.name}
+                        onChange={handleChange}
+                        className="w-full border px-3 py-2 rounded"
+                    />
 
-                    <form onSubmit={handleSubmit} className="space-y-5">
-                        <div>
-                            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                                Full Name
-                            </label>
-                            <input
-                                type="text"
-                                id="name"
-                                name="name"
-                                value={formData.name}
-                                onChange={handleChange}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-                                placeholder="Enter your full name"
-                                disabled={loading}
-                            />
-                        </div>
+                    <input
+                        type="email"
+                        name="email"
+                        placeholder="Email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        className="w-full border px-3 py-2 rounded"
+                    />
 
-                        <div>
-                            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                                Email Address
-                            </label>
-                            <input
-                                type="email"
-                                id="email"
-                                name="email"
-                                value={formData.email}
-                                onChange={handleChange}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-                                placeholder="Enter your email"
-                                disabled={loading}
-                            />
-                        </div>
+                    <input
+                        type="password"
+                        name="password"
+                        placeholder="Password"
+                        value={formData.password}
+                        onChange={handleChange}
+                        className="w-full border px-3 py-2 rounded"
+                    />
 
-                        <div>
-                            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                                Password
-                            </label>
-                            <input
-                                type="password"
-                                id="password"
-                                name="password"
-                                value={formData.password}
-                                onChange={handleChange}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-                                placeholder="Create a password (min. 6 characters)"
-                                disabled={loading}
-                            />
-                        </div>
+                    <input
+                        type="password"
+                        name="confirmPassword"
+                        placeholder="Confirm Password"
+                        value={formData.confirmPassword}
+                        onChange={handleChange}
+                        className="w-full border px-3 py-2 rounded"
+                    />
 
-                        <div>
-                            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                                Confirm Password
-                            </label>
-                            <input
-                                type="password"
-                                id="confirmPassword"
-                                name="confirmPassword"
-                                value={formData.confirmPassword}
-                                onChange={handleChange}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-                                placeholder="Confirm your password"
-                                disabled={loading}
-                            />
-                        </div>
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700"
+                    >
+                        {loading ? "Creating Account..." : "Sign Up"}
+                    </button>
+                </form>
 
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className={`w-full py-3 px-4 rounded-lg text-white font-semibold transition ${loading
-                                    ? 'bg-indigo-400 cursor-not-allowed'
-                                    : 'bg-indigo-600 hover:bg-indigo-700 active:scale-95'
-                                }`}
-                        >
-                            {loading ? 'Creating Account...' : 'Sign Up'}
-                        </button>
-                    </form>
-
-                    <p className="text-center text-gray-600 mt-6">
-                        Already have an account?{' '}
-                        <Link to="/login" className="text-indigo-600 hover:text-indigo-700 font-semibold">
-                            Login
-                        </Link>
-                    </p>
-                </div>
+                <p className="text-center mt-4">
+                    Already have an account?{" "}
+                    <Link to="/login" className="text-indigo-600 font-semibold">
+                        Login
+                    </Link>
+                </p>
             </div>
         </div>
     );
-}
+};
+
+export default SignupPage;
