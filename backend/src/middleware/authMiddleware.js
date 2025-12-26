@@ -1,71 +1,48 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 
-export const authMiddleware = async (req, res, next) => {
+export const protect = async (req, res, next) => {
     try {
-        const token = req.headers.authorization?.split(' ')[1];
+        let token;
+
+        if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+            token = req.headers.authorization.split(' ')[1];
+        }
 
         if (!token) {
             return res.status(401).json({
                 success: false,
-                message: 'No token provided. Please login again.'
+                message: 'Not authorized, no token provided',
             });
         }
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        req.user = await User.findById(decoded.userId).select('-password');
 
-        const user = await User.findById(decoded.userId);
-
-        if (!user) {
+        if (!req.user) {
             return res.status(401).json({
                 success: false,
-                message: 'User not found. Please login again.'
+                message: 'User not found',
             });
         }
 
-        if (!user.isEmailVerified) {
-            return res.status(403).json({
-                success: false,
-                message: 'Please verify your email to access this resource.'
-            });
-        }
-
-        req.userId = user._id;
-        req.user = user;
         next();
     } catch (error) {
-        if (error.name === 'TokenExpiredError') {
-            return res.status(401).json({
-                success: false,
-                message: 'Session expired. Please login again.'
-            });
-        }
-        if (error.name === 'JsonWebTokenError') {
-            return res.status(401).json({
-                success: false,
-                message: 'Invalid token. Please login again.'
-            });
-        }
+        console.error('Auth Middleware Error:', error);
         return res.status(401).json({
             success: false,
-            message: 'Authentication failed. Please login again.'
+            message: 'Not authorized, token failed',
         });
     }
 };
 
-export const protect = authMiddleware;
-
-export const adminOnly = async (req, res, next) => {
-    try {
-        const user = await User.findById(req.userId);
-
-        if (!user || user.role !== 'admin') {
-            return res.status(403).json({ message: 'Admin access required' });
-        }
-
+export const adminOnly = (req, res, next) => {
+    if (req.user && req.user.role === 'admin') {
         next();
-    } catch (error) {
-        return res.status(500).json({ message: 'Server error' });
+    } else {
+        return res.status(403).json({
+            success: false,
+            message: 'Access denied. Admin only.',
+        });
     }
 };
-

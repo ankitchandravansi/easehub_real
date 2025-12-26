@@ -11,6 +11,7 @@ import laundryRoutes from "./routes/laundryRoutes.js";
 import requestRoutes from "./routes/requestRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import bookingRoutes from "./routes/bookingRoutes.js";
+import paymentRoutes from "./routes/paymentRoutes.js";
 
 dotenv.config();
 
@@ -66,6 +67,8 @@ app.use("/api/pg", pgRoutes);
 app.use("/api/meals", mealRoutes);
 app.use("/api/laundry", laundryRoutes);
 app.use("/api/requests", requestRoutes);
+app.use("/api/bookings", bookingRoutes);
+app.use("/api/payments", paymentRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/bookings", bookingRoutes);
 

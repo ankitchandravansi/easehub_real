@@ -1,5 +1,11 @@
 import express from 'express';
-import { getDashboardStats, getAllUsers, updateUserRole } from '../controllers/adminController.js';
+import {
+    getAllUsers,
+    getAllBookings,
+    getAllPayments,
+    updateBookingStatus,
+    getDashboardStats,
+} from '../controllers/adminController.js';
 import { protect, adminOnly } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -7,8 +13,10 @@ const router = express.Router();
 router.use(protect);
 router.use(adminOnly);
 
-router.get('/dashboard', getDashboardStats);
 router.get('/users', getAllUsers);
-router.put('/users/:id/role', updateUserRole);
+router.get('/bookings', getAllBookings);
+router.get('/payments', getAllPayments);
+router.patch('/bookings/:bookingId/status', updateBookingStatus);
+router.get('/stats', getDashboardStats);
 
 export default router;
