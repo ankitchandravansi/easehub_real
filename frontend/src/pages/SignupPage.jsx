@@ -22,41 +22,33 @@ const SignupPage = () => {
         setError('');
     };
 
-    const validateForm = () => {
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+
+        // FRONTEND VALIDATION
         if (!name || !email || !password || !confirmPassword) {
-            setError('All fields are required');
-            return false;
+            return setError('All fields are required');
         }
 
         if (password.length < 6) {
-            setError('Password must be at least 6 characters');
-            return false;
+            return setError('Password must be at least 6 characters');
         }
 
         if (password !== confirmPassword) {
-            setError('Passwords do not match');
-            return false;
+            return setError('Passwords do not match');
         }
-
-        return true;
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        if (!validateForm()) return;
 
         setLoading(true);
         setError('');
 
         try {
-            // ✅ SEND ONLY WHAT BACKEND EXPECTS
-            const payload = {
+            // ✅ SEND EXACTLY WHAT BACKEND EXPECTS
+            const res = await signupService({
                 name,
                 email,
-                password
-            };
-
-            const res = await signupService(payload);
+                password,
+                confirmPassword
+            });
 
             if (res?.success) {
                 navigate('/verify-email', {
@@ -66,7 +58,6 @@ const SignupPage = () => {
                 setError(res?.message || 'Signup failed');
             }
         } catch (err) {
-            // ✅ INSTANT ERROR (NO 30s TIMEOUT)
             if (err?.response?.data?.message) {
                 setError(err.response.data.message);
             } else {
