@@ -17,7 +17,7 @@ dotenv.config();
 
 const app = express();
 
-/* ================= BASIC & SAFE CORS ================= */
+/* ================= CORS ================= */
 const allowedOrigins = [
     "http://localhost:5173",
     "http://localhost:5174",
@@ -40,7 +40,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 /* ================= STATIC FILES ================= */
-app.use('/uploads', express.static('uploads'));
+app.use("/uploads", express.static("uploads"));
 
 /* ================= HEALTH CHECK ================= */
 app.get("/api/health", (req, res) => {
@@ -77,53 +77,33 @@ app.use((err, req, res, next) => {
     });
 });
 
-/* ================= START SERVER (WINDOWS FIX) ================= */
+/* ================= START SERVER (RENDER SAFE) ================= */
 const PORT = process.env.PORT || 10000;
-const HOST = "127.0.0.1";
 
 const startServer = async () => {
     try {
-        // Connect to MongoDB first
         await connectDB();
 
-        // Start Express server with proper error handling
-        const server = app.listen(PORT, HOST, () => {
+        const server = app.listen(PORT, () => {
             console.log("=".repeat(50));
-            console.log(`✅ Server LISTENING on http://${HOST}:${PORT}`);
+            console.log(`✅ Server LISTENING on PORT ${PORT}`);
             console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
-            console.log(`🔗 Health Check: http://${HOST}:${PORT}/api/health`);
+            console.log(`🔗 Health Check: /api/health`);
             console.log("=".repeat(50));
         });
 
-        // Critical: Handle server errors (port in use, permission denied, etc.)
         server.on("error", (err) => {
-            console.error("=".repeat(50));
             console.error("❌ SERVER ERROR:", err.message);
-            console.error("=".repeat(50));
-
-            if (err.code === "EADDRINUSE") {
-                console.error(`Port ${PORT} is already in use!`);
-                console.error("Run: netstat -ano | findstr :${PORT}");
-            } else if (err.code === "EACCES") {
-                console.error(`Permission denied to bind to port ${PORT}`);
-            }
-
             process.exit(1);
         });
 
-        // Graceful shutdown
         process.on("SIGTERM", () => {
-            console.log("⚠️  SIGTERM received, shutting down gracefully...");
-            server.close(() => {
-                console.log("✅ Server closed");
-                process.exit(0);
-            });
+            console.log("⚠️ SIGTERM received, shutting down...");
+            server.close(() => process.exit(0));
         });
 
     } catch (err) {
-        console.error("=".repeat(50));
         console.error("❌ STARTUP FAILED:", err.message);
-        console.error("=".repeat(50));
         process.exit(1);
     }
 };
