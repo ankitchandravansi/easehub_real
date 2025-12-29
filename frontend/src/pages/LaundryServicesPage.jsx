@@ -47,6 +47,7 @@ const LaundryServicesPage = () => {
         pickupTime: '',
         specialInstructions: ''
     });
+    const [selectedService, setSelectedService] = useState(null);
     const { isAuthenticated } = useAuth();
 
     useEffect(() => {
@@ -85,8 +86,15 @@ const LaundryServicesPage = () => {
             alert('Please login to schedule a pickup');
             return;
         }
+        setSelectedService(service);
         setFormData({ ...formData, serviceId: service._id });
         setShowRequestForm(true);
+        setTimeout(() => {
+            const formElement = document.getElementById('pickup-form');
+            if (formElement) {
+                formElement.scrollIntoView({ behavior: 'smooth' });
+            }
+        }, 100);
     };
 
     const handleFormChange = (e) => {
@@ -96,19 +104,69 @@ const LaundryServicesPage = () => {
         });
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        alert('Pickup scheduled successfully! You will receive a confirmation call shortly.');
-        setShowRequestForm(false);
-        setFormData({
-            name: '',
-            phone: '',
-            address: '',
-            serviceId: '',
-            pickupDate: '',
-            pickupTime: '',
-            specialInstructions: ''
-        });
+
+        if (!isAuthenticated) {
+            alert('Please login to create a booking');
+            return;
+        }
+
+        try {
+            console.log('Submitting laundry request:', {
+                serviceType: 'Laundry',
+                serviceId: selectedService._id,
+                serviceName: selectedService.serviceName,
+                amount: selectedService.price,
+                paymentDetails: {
+                    ...formData,
+                    pricingType: selectedService.pricingType,
+                    turnaroundTime: selectedService.turnaroundTime
+                }
+            });
+
+            const { createBooking } = await import('../services/bookingService');
+
+            const bookingPayload = {
+                serviceType: 'Laundry',
+                serviceId: selectedService._id || selectedService.id,
+                serviceName: selectedService.serviceName,
+                amount: typeof selectedService.price === 'number' && !isNaN(selectedService.price) && selectedService.price > 0 ? selectedService.price : 0,
+                paymentDetails: {
+                    ...formData,
+                    pricingType: selectedService.pricingType,
+                    turnaroundTime: selectedService.turnaroundTime
+                }
+            };
+
+            console.log('📤 Laundry Booking Payload:', bookingPayload);
+            const response = await createBooking(bookingPayload);
+            console.log('📥 Laundry Booking Response:', response);
+
+            if (response.success && response.data && response.data.bookingId) {
+                // Store booking info in sessionStorage for recovery
+                sessionStorage.setItem('currentBookingId', response.data.bookingId);
+                sessionStorage.setItem('currentBookingAmount', response.data.amount);
+                sessionStorage.setItem('currentBookingService', 'Laundry');
+
+                const whatsappNumber = '917765811327';
+                const message = `New booking received ✅\nBooking ID: ${response.data.bookingId}\nService: Laundry\nAmount: ₹${response.data.amount}\nStatus: PAYMENT_PENDING`;
+                const whatsappLink = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+                window.open(whatsappLink, '_blank');
+
+                window.location.href = `/payment/${response.data.bookingId}`;
+            } else {
+                throw new Error(response.message || 'Invalid response from server');
+            }
+        } catch (error) {
+            console.error('Error creating booking:', error);
+            if (error.response && error.response.status === 401) {
+                alert('Session expired. Please logout and login again.');
+            } else {
+                const errorMessage = error.response?.data?.message || error.message || 'Failed to create booking. Please try again.';
+                alert(errorMessage);
+            }
+        }
     };
 
     return (
@@ -223,7 +281,7 @@ const LaundryServicesPage = () => {
 
                     {/* Request Form Section */}
                     {showRequestForm && (
-                        <div className="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 border border-gray-200 dark:border-gray-700">
+                        <div id="pickup-form" className="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 border border-gray-200 dark:border-gray-700">
                             <h3 className="text-3xl font-bold text-gray-900 dark:text-white mb-6 text-center">
                                 Quick Pickup Request
                             </h3>

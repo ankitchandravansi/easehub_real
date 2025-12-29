@@ -18,6 +18,8 @@ import BookingSuccessPage from './pages/BookingSuccessPage.jsx';
 import AdminDashboard from './pages/admin/AdminDashboard.jsx';
 import AdminPGList from './pages/admin/AdminPGList.jsx';
 import AdminPGForm from './pages/admin/AdminPGForm.jsx';
+import PaymentPage from './pages/PaymentPage.jsx';
+import AdminBookingsPage from './pages/admin/AdminBookingsPage.jsx';
 
 
 function App() {
@@ -77,6 +79,16 @@ function App() {
                 }
               />
 
+              {/* Payment Route */}
+              <Route
+                path="/payment/:bookingId"
+                element={
+                  <ProtectedRoute>
+                    <PaymentPage />
+                  </ProtectedRoute>
+                }
+              />
+
               {/* Admin Routes */}
               <Route
                 path="/admin/*"
@@ -87,6 +99,7 @@ function App() {
                       <Route path="pgs" element={<AdminPGList />} />
                       <Route path="pgs/add" element={<AdminPGForm />} />
                       <Route path="pgs/edit/:id" element={<AdminPGForm />} />
+                      <Route path="bookings" element={<AdminBookingsPage />} />
                       <Route path="*" element={<AdminDashboard />} />
                     </Routes>
                   </ProtectedRoute>

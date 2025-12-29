@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getPGById } from '../services/services';
-import { createBooking, verifyPayment } from '../services/bookingService';
+import { createBooking } from '../services/bookingService';
 import { useAuth } from '../context/AuthContext';
 
 const BookingPage = () => {
@@ -25,20 +25,10 @@ const BookingPage = () => {
         loadPG();
     }, [id]);
 
-    useEffect(() => {
-        const script = document.createElement('script');
-        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-        script.async = true;
-        document.body.appendChild(script);
-        return () => {
-            document.body.removeChild(script);
-        };
-    }, []);
-
     const loadPG = async () => {
         try {
             const res = await getPGById(id);
-            setPg(res.data);
+            setPg(res.data.data);
         } catch (error) {
             console.error('Error fetching PG', error);
         } finally {
@@ -50,8 +40,13 @@ const BookingPage = () => {
         if (!formData.checkInDate || !formData.checkOutDate) return 0;
         const checkIn = new Date(formData.checkInDate);
         const checkOut = new Date(formData.checkOutDate);
-        const days = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24));
-        return days > 0 ? pg.price * days : 0;
+        // Calculate days, treating same-day check-in/out as 1 day
+        let days = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24));
+        if (days === 0) days = 1;
+
+        // Calculate daily rate from monthly rent (approximate)
+        const dailyRate = Math.round(pg.rent / 30);
+        return days > 0 ? dailyRate * days : 0;
     };
 
     const handlePayment = async (e) => {
@@ -71,58 +66,67 @@ const BookingPage = () => {
         setSubmitting(true);
 
         try {
-            const bookingRes = await createBooking({
-                pgId: id,
-                ...formData,
-                totalAmount: total
+            console.log('Creating booking with data:', {
+                serviceType: 'PG',
+                serviceId: id,
+                serviceName: pg.name,
+                amount: total,
+                paymentDetails: {
+                    pgId: id,
+                    pgName: pg.name,
+                    pgAddress: `${pg.address}, ${pg.city}`,
+                    checkInDate: formData.checkInDate,
+                    checkOutDate: formData.checkOutDate,
+                    guestName: formData.guestName,
+                    guestEmail: formData.guestEmail,
+                    guestPhone: formData.guestPhone,
+                    specialRequests: formData.specialRequests,
+                    duration: Math.ceil((new Date(formData.checkOutDate) - new Date(formData.checkInDate)) / (1000 * 60 * 60 * 24))
+                }
             });
 
-            const { booking, order } = bookingRes.data;
-
-            const options = {
-                key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-                amount: order.amount,
-                currency: order.currency,
-                name: 'EaseHub',
-                description: `Booking for ${pg.name}`,
-                order_id: order.id,
-                handler: async function (response) {
-                    try {
-                        await verifyPayment({
-                            razorpayOrderId: response.razorpay_order_id,
-                            razorpayPaymentId: response.razorpay_payment_id,
-                            razorpaySignature: response.razorpay_signature,
-                            bookingId: booking._id
-                        });
-
-                        navigate('/booking-success', {
-                            state: {
-                                booking: booking,
-                                pg: pg
-                            }
-                        });
-                    } catch (error) {
-                        alert('Payment verification failed. Please contact support.');
-                    }
-                },
-                prefill: {
-                    name: formData.guestName,
-                    email: formData.guestEmail,
-                    contact: formData.guestPhone
-                },
-                theme: {
-                    color: '#4F46E5'
+            const bookingPayload = {
+                serviceType: 'PG',
+                serviceId: id,
+                serviceName: pg.name,
+                amount: typeof total === 'number' && !isNaN(total) && total > 0 ? total : 0,
+                paymentDetails: {
+                    pgId: id,
+                    pgName: pg.name,
+                    pgAddress: `${pg.address}, ${pg.city}`,
+                    checkInDate: formData.checkInDate,
+                    checkOutDate: formData.checkOutDate,
+                    guestName: formData.guestName,
+                    guestEmail: formData.guestEmail,
+                    guestPhone: formData.guestPhone,
+                    specialRequests: formData.specialRequests,
+                    duration: Math.ceil((new Date(formData.checkOutDate) - new Date(formData.checkInDate)) / (1000 * 60 * 60 * 24))
                 }
             };
 
-            const razorpay = new window.Razorpay(options);
-            razorpay.on('payment.failed', function (response) {
-                alert('Payment failed. Please try again.');
-            });
-            razorpay.open();
+            console.log('📤 Booking Payload:', bookingPayload);
+            const response = await createBooking(bookingPayload);
+            console.log('📥 Booking Response:', response);
+
+            if (response.success && response.data && response.data.bookingId) {
+                // Store booking info in sessionStorage for recovery
+                sessionStorage.setItem('currentBookingId', response.data.bookingId);
+                sessionStorage.setItem('currentBookingAmount', typeof total === 'number' && !isNaN(total) ? total : 0);
+                sessionStorage.setItem('currentBookingService', 'PG');
+
+                const whatsappNumber = '917765811327';
+                const message = `New booking received ✅\nBooking ID: ${response.data.bookingId}\nService: PG\nAmount: ₹${typeof total === 'number' && !isNaN(total) ? total : 0}\nStatus: PAYMENT_PENDING`;
+                const whatsappLink = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+                window.open(whatsappLink, '_blank');
+
+                window.location.href = `/payment/${response.data.bookingId}`;
+            } else {
+                throw new Error(response.message || 'Invalid response from server');
+            }
         } catch (error) {
-            console.error(error);
-            alert('Booking failed. Please try again.');
+            console.error('Booking error:', error);
+            const errorMessage = error.response?.data?.message || error.message || 'Booking failed. Please try again.';
+            alert(errorMessage);
         } finally {
             setSubmitting(false);
         }
@@ -164,13 +168,13 @@ const BookingPage = () => {
                             <div className="mt-8 space-y-3">
                                 <div className="flex justify-between">
                                     <span>Price per month</span>
-                                    <span>₹{pg.price}</span>
+                                    <span>₹{pg.rent}</span>
                                 </div>
                                 {total > 0 && (
                                     <>
                                         <div className="flex justify-between">
                                             <span>Duration</span>
-                                            <span>{Math.ceil((new Date(formData.checkOutDate) - new Date(formData.checkInDate)) / (1000 * 60 * 60 * 24))} days</span>
+                                            <span>{Math.max(1, Math.ceil((new Date(formData.checkOutDate) - new Date(formData.checkInDate)) / (1000 * 60 * 60 * 24)))} days</span>
                                         </div>
                                         <div className="h-px bg-white/30 my-2"></div>
                                         <div className="flex justify-between font-bold text-lg">

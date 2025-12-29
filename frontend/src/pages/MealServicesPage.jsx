@@ -119,12 +119,46 @@ const MealServicesPage = () => {
         }
     };
 
-    const handleSubscribe = (plan) => {
+    const handleSubscribe = async (plan) => {
         if (!isAuthenticated) {
             alert('Please login to subscribe to a meal plan');
             return;
         }
-        alert(`Subscribing to ${plan.planName}. Redirecting to payment...`);
+
+        try {
+            const { createBooking } = await import('../services/bookingService');
+
+            const bookingPayload = {
+                serviceType: 'Meal',
+                serviceId: plan._id,
+                serviceName: plan.planName,
+                amount: typeof plan.price === 'number' && !isNaN(plan.price) && plan.price > 0 ? plan.price : 0,
+                paymentDetails: {
+                    planType: plan.planType,
+                    category: plan.category,
+                    meals: plan.meals
+                }
+            };
+
+            console.log('📤 Meal Booking Payload:', bookingPayload);
+            const response = await createBooking(bookingPayload);
+            console.log('📥 Meal Booking Response:', response);
+
+            // Store booking info in sessionStorage for recovery
+            sessionStorage.setItem('currentBookingId', response.data.bookingId);
+            sessionStorage.setItem('currentBookingAmount', response.data.amount);
+            sessionStorage.setItem('currentBookingService', 'Meal');
+
+            const whatsappNumber = '917765811327';
+            const message = `New booking received ✅\nBooking ID: ${response.data.bookingId}\nService: Meal\nAmount: ₹${response.data.amount}\nStatus: PAYMENT_PENDING`;
+            const whatsappLink = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+            window.open(whatsappLink, '_blank');
+
+            window.location.href = `/payment/${response.data.bookingId}`;
+        } catch (error) {
+            console.error('Error creating booking:', error);
+            alert('Failed to create booking. Please try again.');
+        }
     };
 
     return (

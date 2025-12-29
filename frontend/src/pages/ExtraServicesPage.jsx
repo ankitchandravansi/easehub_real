@@ -98,20 +98,45 @@ const ExtraServicesPage = () => {
         });
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        alert(`Service request submitted for ${selectedService.title}! We'll contact you shortly.`);
-        setShowRequestForm(false);
-        setSelectedService(null);
-        setFormData({
-            serviceType: '',
-            description: '',
-            urgency: 'normal',
-            preferredDate: '',
-            preferredTime: '',
-            contactNumber: '',
-            address: ''
-        });
+
+        try {
+            const { createBooking } = await import('../services/bookingService');
+
+            const bookingPayload = {
+                serviceType: 'Extra',
+                serviceId: selectedService.id || null,
+                serviceName: selectedService.title,
+                amount: (() => {
+                    const parsed = parseInt(selectedService.price.replace(/[^0-9]/g, ''));
+                    return typeof parsed === 'number' && !isNaN(parsed) && parsed > 0 ? parsed : 500;
+                })(),
+                paymentDetails: {
+                    ...formData,
+                    category: selectedService.category
+                }
+            };
+
+            console.log('📤 Extra Service Booking Payload:', bookingPayload);
+            const response = await createBooking(bookingPayload);
+            console.log('📥 Extra Service Booking Response:', response);
+
+            // Store booking info in sessionStorage for recovery
+            sessionStorage.setItem('currentBookingId', response.data.bookingId);
+            sessionStorage.setItem('currentBookingAmount', response.data.amount);
+            sessionStorage.setItem('currentBookingService', 'Extra');
+
+            const whatsappNumber = '917765811327';
+            const message = `New booking received ✅\nBooking ID: ${response.data.bookingId}\nService: Extra\nAmount: ₹${response.data.amount}\nStatus: PAYMENT_PENDING`;
+            const whatsappLink = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+            window.open(whatsappLink, '_blank');
+
+            window.location.href = `/payment/${response.data.bookingId}`;
+        } catch (error) {
+            console.error('Error creating booking:', error);
+            alert('Failed to create booking. Please try again.');
+        }
     };
 
     return (
