@@ -9,55 +9,44 @@ import pgRoutes from "./routes/pgRoutes.js";
 import mealRoutes from "./routes/mealRoutes.js";
 import laundryRoutes from "./routes/laundryRoutes.js";
 import requestRoutes from "./routes/requestRoutes.js";
-import adminRoutes from "./routes/adminRoutes.js";
 import bookingRoutes from "./routes/bookingRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js";
 
 dotenv.config();
 
 const app = express();
 
-/* =========================================================
-   CORS — FINAL & STABLE (NO DUPLICATE / NO PREFLIGHT BUG)
-   ========================================================= */
+/* ================= BASIC & SAFE CORS ================= */
 const allowedOrigins = [
-    "https://easehub-frontend.vercel.app",
     "http://localhost:5173",
     "http://localhost:5174",
-    process.env.CLIENT_URL,
-].filter(Boolean);
+    "https://easehub-frontend.vercel.app",
+];
 
 app.use(
     cors({
-        origin: function (origin, callback) {
-            // Allow server-to-server / Postman / curl
+        origin: (origin, callback) => {
             if (!origin) return callback(null, true);
-
-            if (allowedOrigins.includes(origin)) {
-                return callback(null, true);
-            } else {
-                return callback(
-                    new Error(`CORS blocked for origin: ${origin}`)
-                );
-            }
+            if (allowedOrigins.includes(origin)) return callback(null, true);
+            return callback(new Error("CORS blocked"), false);
         },
         credentials: true,
-        methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
-        allowedHeaders: ["Content-Type", "Authorization"],
     })
 );
 
 /* ================= BODY PARSERS ================= */
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+/* ================= STATIC FILES ================= */
+app.use('/uploads', express.static('uploads'));
 
 /* ================= HEALTH CHECK ================= */
 app.get("/api/health", (req, res) => {
     res.status(200).json({
         success: true,
         message: "EaseHub API running ✅",
-        env: process.env.NODE_ENV,
-        time: new Date().toISOString(),
     });
 });
 
@@ -70,7 +59,6 @@ app.use("/api/requests", requestRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/admin", adminRoutes);
-app.use("/api/bookings", bookingRoutes);
 
 /* ================= 404 HANDLER ================= */
 app.use((req, res) => {
@@ -83,31 +71,59 @@ app.use((req, res) => {
 /* ================= ERROR HANDLER ================= */
 app.use((err, req, res, next) => {
     console.error("❌ API Error:", err.message);
-
     res.status(500).json({
         success: false,
-        message: err.message || "Internal Server Error",
+        message: err.message,
     });
 });
 
-/* ================= START SERVER ================= */
+/* ================= START SERVER (WINDOWS FIX) ================= */
 const PORT = process.env.PORT || 10000;
+const HOST = "127.0.0.1";
 
 const startServer = async () => {
     try {
+        // Connect to MongoDB first
         await connectDB();
 
-        app.listen(PORT, "0.0.0.0", () => {
+        // Start Express server with proper error handling
+        const server = app.listen(PORT, HOST, () => {
             console.log("=".repeat(50));
-            console.log(`🚀 Server running on port ${PORT}`);
-            console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
-            console.log(`🔗 Backend URL: https://easehub-real.onrender.com`);
-            console.log(`✅ Allowed CORS origins:`);
-            allowedOrigins.forEach((o) => console.log("   •", o));
+            console.log(`✅ Server LISTENING on http://${HOST}:${PORT}`);
+            console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
+            console.log(`🔗 Health Check: http://${HOST}:${PORT}/api/health`);
             console.log("=".repeat(50));
         });
-    } catch (error) {
-        console.error("❌ Failed to start server:", error);
+
+        // Critical: Handle server errors (port in use, permission denied, etc.)
+        server.on("error", (err) => {
+            console.error("=".repeat(50));
+            console.error("❌ SERVER ERROR:", err.message);
+            console.error("=".repeat(50));
+
+            if (err.code === "EADDRINUSE") {
+                console.error(`Port ${PORT} is already in use!`);
+                console.error("Run: netstat -ano | findstr :${PORT}");
+            } else if (err.code === "EACCES") {
+                console.error(`Permission denied to bind to port ${PORT}`);
+            }
+
+            process.exit(1);
+        });
+
+        // Graceful shutdown
+        process.on("SIGTERM", () => {
+            console.log("⚠️  SIGTERM received, shutting down gracefully...");
+            server.close(() => {
+                console.log("✅ Server closed");
+                process.exit(0);
+            });
+        });
+
+    } catch (err) {
+        console.error("=".repeat(50));
+        console.error("❌ STARTUP FAILED:", err.message);
+        console.error("=".repeat(50));
         process.exit(1);
     }
 };

@@ -1,71 +1,58 @@
 import mongoose from 'mongoose';
 
-const bookingSchema = new mongoose.Schema(
-    {
-        user: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'User',
-            required: true
-        },
-        pg: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'PGHostel',
-            required: true
-        },
-        checkInDate: {
-            type: Date,
-            required: true
-        },
-        checkOutDate: {
-            type: Date,
-            required: true
-        },
-        totalAmount: {
-            type: Number,
-            required: true
-        },
-        status: {
-            type: String,
-            enum: ['pending', 'confirmed', 'cancelled', 'completed'],
-            default: 'pending'
-        },
-        paymentStatus: {
-            type: String,
-            enum: ['pending', 'paid', 'failed', 'refunded'],
-            default: 'pending'
-        },
-        paymentId: {
-            type: String
-        },
-        razorpayOrderId: {
-            type: String
-        },
-        razorpayPaymentId: {
-            type: String
-        },
-        razorpaySignature: {
-            type: String
-        },
-        guestName: {
-            type: String,
-            required: true
-        },
-        guestEmail: {
-            type: String,
-            required: true
-        },
-        guestPhone: {
-            type: String,
-            required: true
-        },
-        specialRequests: {
-            type: String
-        }
+const bookingSchema = new mongoose.Schema({
+    userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
     },
-    {
-        timestamps: true
+    serviceType: {
+        type: String,
+        enum: ['PG', 'Laundry', 'Meal', 'Extra'],
+        required: true
+    },
+    serviceId: {
+        type: String,
+        required: false
+    },
+    serviceName: {
+        type: String,
+        required: true
+    },
+    amount: {
+        type: Number,
+        required: true
+    },
+    bookingId: {
+        type: String,
+        required: true,
+        unique: true
+    },
+    status: {
+        type: String,
+        enum: ['CREATED', 'PAYMENT_PENDING', 'PAID', 'CANCELLED'],
+        default: 'CREATED'
+    },
+    utr: {
+        type: String,
+        default: null
+    },
+    proofImage: {
+        type: String,
+        default: null
+    },
+    paymentDetails: {
+        type: mongoose.Schema.Types.Mixed,
+        default: {}
     }
-);
+}, {
+    timestamps: true
+});
+
+// bookingSchema.index({ bookingId: 1 }, { unique: true }); // Removed: duplicate of schema definition
+bookingSchema.index({ userId: 1, createdAt: -1 });
+bookingSchema.index({ status: 1 });
+bookingSchema.index({ utr: 1 });
 
 const Booking = mongoose.model('Booking', bookingSchema);
 

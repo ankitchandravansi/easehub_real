@@ -1,24 +1,30 @@
 import express from 'express';
+import { protect } from '../middleware/authMiddleware.js';
 import {
     createBooking,
-    verifyPayment,
-    getMyBookings,
+    submitPaymentProof,
+    getUserBookings,
     getBookingById,
     getAllBookings,
     updateBookingStatus,
-    cancelBooking
+    upload
 } from '../controllers/bookingController.js';
-import { protect, adminOnly } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-router.post('/', protect, createBooking);
-router.post('/verify-payment', protect, verifyPayment);
-router.get('/my-bookings', protect, getMyBookings);
-router.get('/:id', protect, getBookingById);
-router.put('/:id/cancel', protect, cancelBooking);
+// IMPORTANT: Specific routes MUST come before parameterized routes
+// Otherwise /:id will catch /create, /payment-proof, etc.
 
-router.get('/', protect, adminOnly, getAllBookings);
-router.put('/:id/status', protect, adminOnly, updateBookingStatus);
+// User routes
+router.post('/create', protect, createBooking);
+router.post('/payment-proof', protect, upload.single('proofImage'), submitPaymentProof);
+router.get('/my-bookings', protect, getUserBookings);
+
+// Admin routes (specific paths first)
+router.get('/admin/all', protect, getAllBookings);
+router.patch('/admin/:id/status', protect, updateBookingStatus);
+
+// Parameterized route LAST
+router.get('/:id', protect, getBookingById);
 
 export default router;
