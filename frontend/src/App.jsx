@@ -6,6 +6,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import MainLayout from './layouts/MainLayout';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
+import ContactPage from './pages/ContactPage';
 import SignupPage from './pages/SignupPage';
 import PGListingPage from './pages/PGListingPage';
 import MealServicesPage from './pages/MealServicesPage';
@@ -20,6 +21,7 @@ import AdminPGList from './pages/admin/AdminPGList.jsx';
 import AdminPGForm from './pages/admin/AdminPGForm.jsx';
 import PaymentPage from './pages/PaymentPage.jsx';
 import AdminBookingsPage from './pages/admin/AdminBookingsPage.jsx';
+import Chatbot from './components/Chatbot/Chatbot.jsx';
 
 
 function App() {
@@ -33,6 +35,7 @@ function App() {
               <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/signup" element={<SignupPage />} />
+              <Route path="/contact" element={<ContactPage />} />
 
 
               {/* Service Pages */}
@@ -107,6 +110,9 @@ function App() {
               />
             </Route>
           </Routes>
+
+          {/* Global Floating Chatbot - Visible on ALL pages */}
+          <Chatbot />
         </Router>
       </AuthProvider>
     </ThemeProvider>

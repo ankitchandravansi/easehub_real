@@ -7,6 +7,7 @@ import {
     getBookingById,
     getAllBookings,
     updateBookingStatus,
+    getBookingByPublicId,
     upload
 } from '../controllers/bookingController.js';
 
@@ -19,6 +20,9 @@ const router = express.Router();
 router.post('/create', protect, createBooking);
 router.post('/payment-proof', protect, upload.single('proofImage'), submitPaymentProof);
 router.get('/my-bookings', protect, getUserBookings);
+
+// Public route for Chatbot lookup
+router.get('/search/:id', getBookingByPublicId);
 
 // Admin routes (specific paths first)
 router.get('/admin/all', protect, getAllBookings);

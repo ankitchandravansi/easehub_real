@@ -12,6 +12,7 @@ import requestRoutes from "./routes/requestRoutes.js";
 import bookingRoutes from "./routes/bookingRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
+import analyticsRoutes from "./routes/analyticsRoutes.js";
 
 dotenv.config();
 
@@ -59,6 +60,7 @@ app.use("/api/requests", requestRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/analytics", analyticsRoutes);
 
 /* ================= 404 HANDLER ================= */
 app.use((req, res) => {

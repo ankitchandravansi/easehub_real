@@ -114,7 +114,7 @@ const BookingPage = () => {
                 sessionStorage.setItem('currentBookingAmount', typeof total === 'number' && !isNaN(total) ? total : 0);
                 sessionStorage.setItem('currentBookingService', 'PG');
 
-                const whatsappNumber = '917765811327';
+                const whatsappNumber = '916201614778';
                 const message = `New booking received ✅\nBooking ID: ${response.data.bookingId}\nService: PG\nAmount: ₹${typeof total === 'number' && !isNaN(total) ? total : 0}\nStatus: PAYMENT_PENDING`;
                 const whatsappLink = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
                 window.open(whatsappLink, '_blank');

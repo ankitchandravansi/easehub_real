@@ -206,6 +206,8 @@ export const getAllBookings = async (req, res) => {
     }
 };
 
+// ... existing code ...
+
 export const updateBookingStatus = async (req, res) => {
     try {
         const { id } = req.params;
@@ -232,6 +234,33 @@ export const updateBookingStatus = async (req, res) => {
         });
     } catch (error) {
         console.error('Update booking status error:', error);
+        res.status(500).json({ success: false, message: 'Server error', error: error.message });
+    }
+};
+
+export const getBookingByPublicId = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Strict format check to prevent regex DoS or broad searches
+        if (!/^EH-\d+$/i.test(id)) {
+            return res.status(400).json({ success: false, message: 'Invalid Booking ID format' });
+        }
+
+        const booking = await Booking.findOne({
+            bookingId: { $regex: new RegExp(`^${id}$`, 'i') }
+        }).select('bookingId serviceType amount status createdAt -_id');
+
+        if (!booking) {
+            return res.status(404).json({ success: false, message: 'Booking not found' });
+        }
+
+        res.json({
+            success: true,
+            data: booking
+        });
+    } catch (error) {
+        console.error('Get public booking error:', error);
         res.status(500).json({ success: false, message: 'Server error', error: error.message });
     }
 };

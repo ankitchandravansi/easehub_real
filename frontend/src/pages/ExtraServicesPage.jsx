@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
 const ExtraServicesPage = () => {
@@ -6,6 +7,7 @@ const ExtraServicesPage = () => {
     const [selectedService, setSelectedService] = useState(null);
     const [formData, setFormData] = useState({
         serviceType: '',
+        vehicleType: 'bus',
         description: '',
         urgency: 'normal',
         preferredDate: '',
@@ -52,25 +54,11 @@ const ExtraServicesPage = () => {
             price: '₹300 - ₹600'
         },
         {
-            id: 'furniture-assembly',
-            icon: '🪑',
-            title: 'Furniture Assembly',
-            description: 'Assembly and installation of furniture',
-            price: '₹200 - ₹500'
-        },
-        {
-            id: 'pest-control',
-            icon: '🐛',
-            title: 'Pest Control',
-            description: 'Professional pest control services',
-            price: '₹400 - ₹1200'
-        },
-        {
-            id: 'ac-repair',
-            icon: '❄️',
-            title: 'AC Repair & Service',
-            description: 'Air conditioner repair and maintenance',
-            price: '₹350 - ₹1500'
+            id: 'vehicle-services',
+            icon: '🚗',
+            title: 'Vehicle Services',
+            description: 'Book Bus, Train, Bike, Car, or Auto services',
+            price: 'Variable'
         },
         {
             id: 'custom',
@@ -81,13 +69,17 @@ const ExtraServicesPage = () => {
         }
     ];
 
+    const navigate = useNavigate();
+    const location = useLocation();
+
     const handleRequestService = (service) => {
         if (!isAuthenticated) {
-            alert('Please login to request a service');
+            // alert('Please login to request a service');
+            navigate('/login', { state: { from: location } });
             return;
         }
         setSelectedService(service);
-        setFormData({ ...formData, serviceType: service.title });
+        setFormData({ ...formData, serviceType: service.title, vehicleType: 'bus' });
         setShowRequestForm(true);
     };
 
@@ -104,16 +96,21 @@ const ExtraServicesPage = () => {
         try {
             const { createBooking } = await import('../services/bookingService');
 
+            const finalServiceName = selectedService.id === 'vehicle-services'
+                ? `${selectedService.title} - ${formData.vehicleType.toUpperCase()}`
+                : selectedService.title;
+
             const bookingPayload = {
                 serviceType: 'Extra',
                 serviceId: selectedService.id || null,
-                serviceName: selectedService.title,
+                serviceName: finalServiceName,
                 amount: (() => {
                     const parsed = parseInt(selectedService.price.replace(/[^0-9]/g, ''));
                     return typeof parsed === 'number' && !isNaN(parsed) && parsed > 0 ? parsed : 500;
                 })(),
                 paymentDetails: {
                     ...formData,
+                    vehicleType: selectedService.id === 'vehicle-services' ? formData.vehicleType : undefined,
                     category: selectedService.category
                 }
             };
@@ -128,7 +125,7 @@ const ExtraServicesPage = () => {
             sessionStorage.setItem('currentBookingService', 'Extra');
 
             const whatsappNumber = '917765811327';
-            const message = `New booking received ✅\nBooking ID: ${response.data.bookingId}\nService: Extra\nAmount: ₹${response.data.amount}\nStatus: PAYMENT_PENDING`;
+            const message = `New booking received ✅\nBooking ID: ${response.data.bookingId}\nService: Extra (${finalServiceName})\nAmount: ₹${response.data.amount}\nStatus: PAYMENT_PENDING`;
             const whatsappLink = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
             window.open(whatsappLink, '_blank');
 
@@ -198,6 +195,15 @@ const ExtraServicesPage = () => {
                                     className="btn btn-primary w-full text-lg py-3 font-bold group-hover:shadow-xl"
                                 >
                                     Request Service
+                                </button>
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        window.open(`https://wa.me/916201614778?text=Hi, I'm interested in Extra Service: ${service.title}`, '_blank');
+                                    }}
+                                    className="btn btn-outline w-full text-lg py-3 font-bold mt-3 border-green-500 text-green-600 hover:bg-green-50 hover:border-green-600 dark:text-green-400 dark:hover:bg-green-900/20"
+                                >
+                                    Chat on WhatsApp
                                 </button>
                             </div>
                         ))}
@@ -388,6 +394,25 @@ const ExtraServicesPage = () => {
                         </div>
 
                         <form onSubmit={handleSubmit} className="space-y-6">
+                            {selectedService.id === 'vehicle-services' && (
+                                <div>
+                                    <label className="label">Vehicle Type *</label>
+                                    <select
+                                        name="vehicleType"
+                                        required
+                                        value={formData.vehicleType}
+                                        onChange={handleFormChange}
+                                        className="input"
+                                    >
+                                        <option value="bus">Bus</option>
+                                        <option value="train">Train</option>
+                                        <option value="bike">Bike</option>
+                                        <option value="car">Car</option>
+                                        <option value="auto">Auto</option>
+                                    </select>
+                                </div>
+                            )}
+
                             <div>
                                 <label className="label">Service Description *</label>
                                 <textarea

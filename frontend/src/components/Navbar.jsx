@@ -29,7 +29,8 @@ const Navbar = () => {
         { name: 'PG/Hostel', path: '/services/pg' },
         { name: 'Meals', path: '/services/meals' },
         { name: 'Laundry', path: '/services/laundry' },
-        { name: 'Extra Services', path: '/services/extra' }
+        { name: 'Extra Services', path: '/services/extra' },
+        { name: 'Contact', path: '/contact' }
     ];
 
     const isActive = (path) => location.pathname === path;
@@ -49,10 +50,12 @@ const Navbar = () => {
                         className="flex items-center gap-3 group"
                         onClick={() => setIsMobileMenuOpen(false)}
                     >
-                        <div className="w-10 h-10 bg-gradient-to-br from-primary-600 to-secondary-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105">
-                            <span className="text-white font-black text-xl">E</span>
-                        </div>
-                        <span className="text-2xl font-black bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent">
+                        <img
+                            src="https://r0.image2url.com/images/1763453634014-4471bab2-9fa6-4e58-90ce-f17d59238f33.png"
+                            alt="EaseHub Logo"
+                            className="h-14 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
+                        />
+                        <span className="text-2xl font-black text-yellow-500">
                             EaseHub
                         </span>
                     </Link>

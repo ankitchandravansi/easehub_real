@@ -6,6 +6,19 @@ const mealPlanSchema = new mongoose.Schema({
         required: [true, 'Plan name is required'],
         trim: true
     },
+    messName: {
+        type: String,
+        required: false,
+        trim: true
+    },
+    location: {
+        type: String,
+        required: false
+    },
+    contactNumber: {
+        type: String,
+        required: false
+    },
     description: {
         type: String,
         required: true

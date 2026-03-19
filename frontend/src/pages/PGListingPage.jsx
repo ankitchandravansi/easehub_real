@@ -275,6 +275,12 @@ const PGListingPage = () => {
                                                 ₹{pg.rent?.toLocaleString() || 'N/A'}
                                             </p>
                                         </div>
+                                        <button
+                                            onClick={() => window.open(`https://wa.me/916201614778?text=Hi, I'm interested in PG: ${pg.name}`, '_blank')}
+                                            className="px-4 py-2 border border-green-500 text-green-600 hover:bg-green-50 rounded-lg text-sm font-semibold transition mr-2"
+                                        >
+                                            WhatsApp
+                                        </button>
                                         <Link to={`/book/${pg._id}`} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition">
                                             Book Now
                                         </Link>

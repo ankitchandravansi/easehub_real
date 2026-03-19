@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { getAllMeals } from '../services/services';
 import { useAuth } from '../hooks/useAuth';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -73,6 +74,8 @@ const MealServicesPage = () => {
     const [loading, setLoading] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState('all');
     const { isAuthenticated } = useAuth();
+    const navigate = useNavigate();
+    const location = useLocation();
 
     useEffect(() => {
         fetchMealPlans();
@@ -121,7 +124,7 @@ const MealServicesPage = () => {
 
     const handleSubscribe = async (plan) => {
         if (!isAuthenticated) {
-            alert('Please login to subscribe to a meal plan');
+            navigate('/login', { state: { from: location } });
             return;
         }
 
@@ -149,7 +152,7 @@ const MealServicesPage = () => {
             sessionStorage.setItem('currentBookingAmount', response.data.amount);
             sessionStorage.setItem('currentBookingService', 'Meal');
 
-            const whatsappNumber = '917765811327';
+            const whatsappNumber = '916201614778';
             const message = `New booking received ✅\nBooking ID: ${response.data.bookingId}\nService: Meal\nAmount: ₹${response.data.amount}\nStatus: PAYMENT_PENDING`;
             const whatsappLink = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
             window.open(whatsappLink, '_blank');
@@ -251,13 +254,26 @@ const MealServicesPage = () => {
                                         </span>
                                     </div>
 
-                                    {/* Plan Name */}
-                                    <h3 className="text-3xl font-bold text-gray-900 dark:text-white mb-3">
-                                        {plan.planName}
+                                    {/* Plan Name & Mess Name */}
+                                    <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+                                        {plan.messName || plan.planName}
                                     </h3>
+                                    {plan.messName && (
+                                        <p className="text-sm font-semibold text-green-600 dark:text-green-400 mb-3 uppercase tracking-wide">
+                                            {plan.planName}
+                                        </p>
+                                    )}
+
+                                    {/* Location */}
+                                    {plan.location && (
+                                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 flex items-start gap-1">
+                                            <span className="shrink-0">📍</span>
+                                            <span className="line-clamp-2">{plan.location}</span>
+                                        </p>
+                                    )}
 
                                     {/* Description */}
-                                    <p className="text-gray-600 dark:text-gray-400 mb-6 text-lg">
+                                    <p className="text-gray-600 dark:text-gray-400 mb-6 text-base line-clamp-3">
                                         {plan.description}
                                     </p>
 
@@ -322,6 +338,12 @@ const MealServicesPage = () => {
                                             }`}
                                     >
                                         Subscribe Now
+                                    </button>
+                                    <button
+                                        onClick={() => window.open(`https://wa.me/916201614778?text=Hi, I'm interested in Meal Plan: ${plan.messName || plan.planName}`, '_blank')}
+                                        className="btn btn-outline w-full text-lg py-3 font-bold mt-3 border-green-500 text-green-600 hover:bg-green-50 hover:border-green-600 dark:text-green-400 dark:hover:bg-green-900/20"
+                                    >
+                                        Chat on WhatsApp
                                     </button>
                                 </div>
                             ))}

@@ -274,6 +274,12 @@ const LaundryServicesPage = () => {
                                     >
                                         Schedule Pickup
                                     </button>
+                                    <button
+                                        onClick={() => window.open(`https://wa.me/916201614778?text=Hi, I'm interested in Laundry Service: ${service.serviceName}`, '_blank')}
+                                        className="btn btn-outline w-full text-lg py-3 font-bold mt-3 border-green-500 text-green-600 hover:bg-green-50 hover:border-green-600 dark:text-green-400 dark:hover:bg-green-900/20"
+                                    >
+                                        Chat on WhatsApp
+                                    </button>
                                 </div>
                             ))}
                         </div>
