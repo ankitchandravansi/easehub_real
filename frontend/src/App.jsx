@@ -8,6 +8,9 @@ import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import ContactPage from './pages/ContactPage';
 import SignupPage from './pages/SignupPage';
+import OTPVerificationPage from './pages/OTPVerificationPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import PGListingPage from './pages/PGListingPage';
 import MealServicesPage from './pages/MealServicesPage';
 import LaundryServicesPage from './pages/LaundryServicesPage';
@@ -35,6 +38,9 @@ function App() {
               <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/signup" element={<SignupPage />} />
+              <Route path="/verify-email" element={<OTPVerificationPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="/contact" element={<ContactPage />} />
 
 

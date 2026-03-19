@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { resetPassword as resetPasswordService, resendOTP } from '../services/authService';
+import { resetPassword as resetPasswordService, resendResetOTP } from '../services/authService';
 
 const ResetPasswordPage = () => {
     const navigate = useNavigate();
@@ -114,7 +114,7 @@ const ResetPasswordPage = () => {
         setSuccess('');
 
         try {
-            const response = await resendOTP({ email });
+            const response = await resendResetOTP({ email });
 
             if (response.success) {
                 setSuccess(response.message);

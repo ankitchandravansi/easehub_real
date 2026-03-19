@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import api from '../utils/api';
 import toast from 'react-hot-toast';
 import { MailCheck, RefreshCw, KeyRound, ArrowRight } from 'lucide-react';
+import { verifyEmail, resendOTP } from '../services/authService';
 
 const OTPVerificationPage = () => {
     const [otp, setOtp] = useState('');
@@ -36,9 +36,14 @@ const OTPVerificationPage = () => {
 
         setLoading(true);
         try {
-            await api.post('/auth/verify-email', { email, otp });
-            toast.success('Email verified successfully!');
-            navigate('/login');
+            const res = await verifyEmail({ email, otp });
+            if (res.success) {
+                toast.success('Email verified! Welcome to EaseHub 🎉');
+                // Token is saved inside verifyEmail service
+                navigate('/', { replace: true });
+            } else {
+                toast.error(res.message || 'Verification failed');
+            }
         } catch (err) {
             toast.error(err.response?.data?.message || 'Verification failed');
         } finally {
@@ -47,11 +52,16 @@ const OTPVerificationPage = () => {
     };
 
     const handleResend = async () => {
+        if (timeLeft > 0 || resending) return;
         setResending(true);
         try {
-            await api.post('/auth/resend-otp', { email });
-            toast.success('New code sent to your email');
-            setTimeLeft(60);
+            const res = await resendOTP({ email });
+            if (res.success) {
+                toast.success('New OTP sent to your email');
+                setTimeLeft(60);
+            } else {
+                toast.error(res.message || 'Failed to resend code');
+            }
         } catch (err) {
             toast.error(err.response?.data?.message || 'Failed to resend code');
         } finally {
@@ -106,8 +116,9 @@ const OTPVerificationPage = () => {
                         <button
                             onClick={handleResend}
                             disabled={timeLeft > 0 || resending}
-                            className={`flex items-center justify-center gap-2 mx-auto text-sm font-bold transition-colors ${timeLeft > 0 || resending ? 'text-slate-600' : 'text-slate-400 hover:text-white'
-                                }`}
+                            className={`flex items-center justify-center gap-2 mx-auto text-sm font-bold transition-colors ${
+                                timeLeft > 0 || resending ? 'text-slate-600' : 'text-slate-400 hover:text-white'
+                            }`}
                         >
                             {resending ? (
                                 <RefreshCw className="w-4 h-4 animate-spin" />

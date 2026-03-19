@@ -50,10 +50,11 @@ const SignupPage = () => {
             const res = await signup({ name, email, password });
 
             if (res.success) {
-                // ✅ User is now logged in with token, redirect to home
-                navigate('/', {
+                // Redirect to OTP verification page with email in state
+                navigate('/verify-email', {
                     state: {
-                        message: 'Account created successfully! Welcome to EaseHub.',
+                        email,
+                        message: res.message || 'Please check your email for the OTP.',
                     },
                 });
             } else {
